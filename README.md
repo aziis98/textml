@@ -78,6 +78,50 @@ Let's say we want to use this as a templating language for HTML.
 }
 ```
 
+## Reactive GUIs
+
+Counter
+
+```
+#reactive-html {
+    <p>Current value #{ value }</p>
+
+    <button #onclick{ value += 1 }>Increment</button>
+    <button #onclick{ value -= 1 }>Decrement</button>
+}
+```
+
+Todo List
+
+```
+#reactive.html {
+    #html.input {
+        #type { text }
+        #reactive.model { newItemText }
+    }
+
+    #html.button {
+        New Todo
+
+        #onclick { items.push(newItemText) }
+    }
+
+    #html.ul {
+        #each{ i, item }{ items }{
+            #html.li{
+                $item
+
+                #html.button {
+                    Delete
+
+                    #onclick { items.splice(i, 1) }
+                }
+            }
+        }
+    }
+}
+```
+
 ## Composable Lexers
 
 ```go
