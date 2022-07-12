@@ -80,7 +80,7 @@ func ParseElement(ts []lexer.Token) (*Node, []lexer.Token, error) {
 
 	blocks := []*Block{}
 
-	for len(ts) > 0 && t.Type != lexer.TextToken && t.Type != lexer.EOFToken {
+	for len(ts) > 0 && t.Type == lexer.BraceOpenToken {
 		var blk *Block
 		var err error
 

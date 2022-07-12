@@ -1,7 +1,6 @@
 package parser_test
 
 import (
-	"encoding/json"
 	"strings"
 	"testing"
 
@@ -19,71 +18,58 @@ func TestParser1(t *testing.T) {
 	document, err := parser.ParseDocument(tokens)
 	assert.Nil(t, err)
 
-	doc, _ := json.MarshalIndent(document, "", "  ")
-
-	assert.Equal(t, strings.TrimSpace(`
-{
-  "children": [
-    {
-      "type": "element",
-      "name": "sum",
-      "arguments": [
-        {
-          "children": [
-            {
-              "type": "text",
-              "text": " 1 "
-            }
-          ]
-        },
-        {
-          "children": [
-            {
-              "type": "text",
-              "text": " 2 "
-            }
-          ]
-        },
-        {
-          "children": [
-            {
-              "type": "text",
-              "text": " "
-            },
-            {
-              "type": "element",
-              "name": "sum",
-              "arguments": [
-                {
-                  "children": [
-                    {
-                      "type": "text",
-                      "text": " 3 "
-                    }
-                  ]
-                },
-                {
-                  "children": [
-                    {
-                      "type": "text",
-                      "text": " 4 "
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              "type": "text",
-              "text": " "
-            }
-          ]
-        }
-      ]
-    }
-  ]
-}`),
-		string(doc),
-	)
+	assert.Equal(t, &parser.Block{
+		Children: []*parser.Node{
+			{
+				Type: parser.NodeTypes.Element,
+				Name: "sum",
+				Args: []*parser.Block{
+					{
+						Children: []*parser.Node{
+							{
+								Type: parser.NodeTypes.Text,
+								Text: "1",
+							},
+						},
+					},
+					{
+						Children: []*parser.Node{
+							{
+								Type: parser.NodeTypes.Text,
+								Text: "2",
+							},
+						},
+					},
+					{
+						Children: []*parser.Node{
+							{
+								Type: parser.NodeTypes.Element,
+								Name: "sum",
+								Args: []*parser.Block{
+									{
+										Children: []*parser.Node{
+											{
+												Type: parser.NodeTypes.Text,
+												Text: "3",
+											},
+										},
+									},
+									{
+										Children: []*parser.Node{
+											{
+												Type: parser.NodeTypes.Text,
+												Text: "4",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}, document)
 }
 
 func TestPaser2(t *testing.T) {
@@ -95,45 +81,36 @@ func TestPaser2(t *testing.T) {
 	document, err := parser.ParseDocument(tokens)
 	assert.Nil(t, err)
 
-	doc, _ := json.MarshalIndent(document, "", "  ")
-
-	assert.Equal(t, strings.TrimSpace(`
-{
-  "children": [
-    {
-      "type": "element",
-      "name": "code",
-      "arguments": [
-        {
-          "children": [
-            {
-              "type": "text",
-              "text": " "
-            },
-            {
-              "type": "element",
-              "name": "format",
-              "arguments": [
-                {
-                  "children": [
-                    {
-                      "type": "text",
-                      "text": " js "
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              "type": "text",
-              "text": " let x = \"#node{ 1 }\"; "
-            }
-          ]
-        }
-      ]
-    }
-  ]
-}`),
-		string(doc),
-	)
+	assert.Equal(t, &parser.Block{
+		Children: []*parser.Node{
+			{
+				Type: parser.NodeTypes.Element,
+				Name: "code",
+				Args: []*parser.Block{
+					{
+						Children: []*parser.Node{
+							{
+								Type: parser.NodeTypes.Element,
+								Name: "format",
+								Args: []*parser.Block{
+									{
+										Children: []*parser.Node{
+											{
+												Type: parser.NodeTypes.Text,
+												Text: "js",
+											},
+										},
+									},
+								},
+							},
+							{
+								Type: parser.NodeTypes.Text,
+								Text: ` let x = "#node{ 1 }";`,
+							},
+						},
+					},
+				},
+			},
+		},
+	}, document)
 }

@@ -28,7 +28,7 @@ func TestLexer2(t *testing.T) {
 	tokens, err := lexer.New(s).AllTokens()
 
 	assert.Nil(t, tokens)
-	assert.Equal(t, "errors: [too many braces]", err.Error())
+	assert.Equal(t, "errors: [too many braces at 21]", err.Error())
 }
 
 var example3 = strings.TrimSpace(`
@@ -50,12 +50,12 @@ func TestLexer3(t *testing.T) {
 		{lexer.TextToken, "\n    "},
 		{lexer.ElementToken, "#title"},
 		{lexer.BraceOpenToken, "{"},
-		{lexer.TextToken, " A short title "},
+		{lexer.TextToken, "A short title"},
 		{lexer.BraceCloseToken, "}"},
 		{lexer.TextToken, "\n\n    This is some text with some "},
 		{lexer.ElementToken, "#bold"},
 		{lexer.BraceOpenToken, "{"},
-		{lexer.TextToken, " bold "},
+		{lexer.TextToken, "bold"},
 		{lexer.BraceCloseToken, "}"},
 		{lexer.TextToken, " text\n"},
 		{lexer.BraceCloseToken, "}"},
@@ -103,7 +103,7 @@ func TestLexer5(t *testing.T) {
 		{lexer.TextToken, "\n    "},
 		{lexer.ElementToken, "#format"},
 		{lexer.BraceOpenToken, "{{"},
-		{lexer.TextToken, " js "},
+		{lexer.TextToken, "js"},
 		{lexer.BraceCloseToken, "}}"},
 		{lexer.TextToken, "\n    Some raw #bold{ nodes }\n"},
 		{lexer.BraceCloseToken, "}}"},
@@ -120,21 +120,19 @@ func TestLexer6(t *testing.T) {
 	assert.Equal(t, []lexer.Token{
 		{lexer.ElementToken, "#sum"},
 		{lexer.BraceOpenToken, "{"},
-		{lexer.TextToken, " 1 "},
+		{lexer.TextToken, "1"},
 		{lexer.BraceCloseToken, "}"},
 		{lexer.BraceOpenToken, "{"},
-		{lexer.TextToken, " 2 "},
+		{lexer.TextToken, "2"},
 		{lexer.BraceCloseToken, "}"},
 		{lexer.BraceOpenToken, "{"},
-		{lexer.TextToken, " "},
 		{lexer.ElementToken, "#sum"},
 		{lexer.BraceOpenToken, "{{"},
-		{lexer.TextToken, " 3 "},
+		{lexer.TextToken, "3"},
 		{lexer.BraceCloseToken, "}}"},
 		{lexer.BraceOpenToken, "{{{"},
-		{lexer.TextToken, " 4 "},
+		{lexer.TextToken, "4"},
 		{lexer.BraceCloseToken, "}}}"},
-		{lexer.TextToken, " "},
 		{lexer.BraceCloseToken, "}"},
 		{lexer.EOFToken, ""},
 	}, tokens)

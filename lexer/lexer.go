@@ -180,7 +180,8 @@ func (l *lexer) emit(tt tokenType) {
 	l.bufFrom = l.pos
 
 	if len(value) > 0 || tt == EOFToken {
-		l.tokens <- Token{tt, value}
+		t := Token{tt, value}
+		l.tokens <- t
 	}
 }
 
@@ -197,11 +198,11 @@ func (l *lexer) acceptAny(valid string) bool {
 	r := l.next()
 
 	if strings.ContainsRune(valid, r) {
-		l.backup()
-		return false
+		return true
 	}
 
-	return true
+	l.backup()
+	return false
 }
 
 func (l *lexer) acceptSeq(valid string) bool {
@@ -254,10 +255,10 @@ func lexText(l *lexer) {
 		switch r {
 		case eofRune:
 			l.emit(TextToken)
-
 			l.emit(EOFToken)
 			return
 		case '#':
+
 			// Tries to tokenize an element
 			elementStart := l.cursor()
 
@@ -274,6 +275,7 @@ func lexText(l *lexer) {
 			bracesEnd := l.cursor()
 
 			depth := l.bracesStack.Top()
+
 			if newDepth >= depth { // if there are enough braces then accept the element token
 				l.move(elementStart) // finish previous text token
 				l.emit(TextToken)
@@ -287,16 +289,28 @@ func lexText(l *lexer) {
 				l.move(bracesEnd) // emit new open brace token
 				l.emit(BraceOpenToken)
 
+				if l.acceptAny(" ") { // skip a single whitespace if present after openning brace
+					l.ignore()
+				}
+
 				l.bracesStack.Push(newDepth)
 			}
 		case '}':
 			bracesStart := l.cursor()
-
 			braceCount := l.acceptAnyRepeated("}")
+
 			depth := l.bracesStack.Top()
 			if braceCount == depth {
-				l.move(bracesStart)
-				l.emit(TextToken)
+				if l.bufferAt(bracesStart-1) == ' ' {
+					l.move(bracesStart - 1)
+					l.emit(TextToken)
+
+					l.next() // skip a single whitespace if present before closing brace
+					l.ignore()
+				} else {
+					l.move(bracesStart)
+					l.emit(TextToken)
+				}
 
 				l.move(bracesStart + braceCount)
 				l.emit(BraceCloseToken)
@@ -309,8 +323,13 @@ func lexText(l *lexer) {
 
 					depth := l.bracesStack.Top()
 					if newDepth >= depth { // if there are enough braces then accept the element token
+
 						l.move(bracesEnd)
 						l.emit(BraceOpenToken)
+
+						if l.acceptAny(" ") { // skip a single whitespace if present after brace
+							l.ignore()
+						}
 
 						l.bracesStack.Push(newDepth)
 					}
@@ -318,12 +337,12 @@ func lexText(l *lexer) {
 			} else {
 				if braceCount > depth {
 					l.emit(EOFToken)
-					l.errorf("too many braces")
+					l.errorf("too many braces at %v", l.pos)
 					return
 				}
 			}
+		default:
+			l.next()
 		}
-
-		l.next()
 	}
 }
