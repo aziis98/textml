@@ -54,14 +54,15 @@ A **document** is composed of various nested _blocks_. A **block** can be a piec
 #document {
     #title { This is some title }
 
-    This is the first block. Lorem ipsum dolor sit amet #bold { consectetur } adipisicing elit. Vitae architecto commodi officia natus ipsam labore fugit nisi quis. Deserunt, dolor #italic { consectetur nisi } placeat repellat velit #strikethrough { assumenda vero sed tenetur } hic.
+    This is the first block. Lorem ipsum dolor sit amet #bold { consectetur } adipisicing elit. Vitae architecto commodi officia natus ipsam labore fugit nisi quis. Deserunt, dolor #italic { consectetur nisi } placeat repellat velit #strikethrough{ assumenda vero sed tenetur } hic.
 
     #subtitle { This is some title }
 
-    This is the second block. Lorem ipsum dolor sit amet consectetur adipisicing elit. Vitae architecto commodi officia natus ipsam labore fugit nisi quis. Deserunt, #link { dolor consectetur nisi }{ https://en.wikipedia.org/wiki/Main_Page } placeat repellat velit assumenda vero sed tenetur hic.
+    This is the second block. Lorem ipsum dolor sit amet consectetur adipisicing elit. Vitae architecto commodi officia natus ipsam labore fugit nisi quis. Deserunt, #link{ {dolor consectetur nisi} }{ https://en.wikipedia.org/wiki/Main_Page } placeat repellat velit assumenda vero sed tenetur hic.
 
-    #code {
+    #code{
         #format { js }
+        #theme { solaraized }
 
         function main() {
             console.log('Hello, World!')
@@ -77,6 +78,10 @@ A **document** is composed of various nested _blocks_. A **block** can be a piec
 
         This is some raw #code { text-ml }
     }}
+
+    -   Item 1
+    -   Item 2
+    -   Item 3
 
     #list {
         #item { Item 1 }
@@ -94,6 +99,26 @@ A **document** is composed of various nested _blocks_. A **block** can be a piec
         }
         #item {
             Item 8
+        }
+    }
+
+    #list-item {
+        fiehffweoi
+    }
+    #list-item {
+        fiehffweoi
+    }
+    #list-item {
+        fiehffweoi
+
+        #list-item {
+            fiehffweoi
+        }
+        #list-item {
+            fiehffweoi
+        }
+        #list-item {
+            fiehffweoi
         }
     }
 }

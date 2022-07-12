@@ -12,11 +12,11 @@ import (
 type tokenType int
 
 const (
-	textToken tokenType = iota
-	nodeToken
-	braceOpenToken
-	braceCloseToken
-	eofToken
+	TextToken tokenType = iota
+	ElementToken
+	BraceOpenToken
+	BraceCloseToken
+	EOFToken
 )
 
 const eofRune rune = 0
@@ -24,6 +24,10 @@ const eofRune rune = 0
 type Token struct {
 	Type  tokenType
 	Value string
+}
+
+func (t Token) String() string {
+	return fmt.Sprintf("Token{%v, %q}", t.Type, t.Value)
 }
 
 type lexer struct {
@@ -36,9 +40,9 @@ type lexer struct {
 	pos int
 
 	tokens chan Token
-	err    error
+	err    chan error
 
-	escapeDepth *utils.Stack[int]
+	bracesStack *utils.Stack[int]
 }
 
 func New(rr io.RuneReader) *lexer {
@@ -51,10 +55,10 @@ func New(rr io.RuneReader) *lexer {
 
 		pos: 0,
 
-		tokens: make(chan Token),
-		err:    nil,
+		tokens: make(chan Token, 1),
+		err:    make(chan error, 1),
 
-		escapeDepth: utils.NewStack[int](),
+		bracesStack: utils.NewStack(1),
 	}
 
 	go l.scan()
@@ -66,35 +70,34 @@ func (l *lexer) NextToken() (Token, error) {
 	select {
 	case t := <-l.tokens:
 		return t, nil
-	default:
-		return Token{}, l.err
+	case err := <-l.err:
+		return Token{}, err
 	}
 }
 
 func (l *lexer) AllTokens() ([]Token, error) {
 	tokens := []Token{}
+	errors := []error{}
 
 	for t := range l.tokens {
 		tokens = append(tokens, t)
+	}
 
-		if l.err != nil {
-			return nil, l.err
-		}
+	for err := range l.err {
+		errors = append(errors, err)
+	}
+
+	if len(errors) > 0 {
+		return nil, fmt.Errorf("errors: %v", errors)
 	}
 
 	return tokens, nil
 }
 
 func (l *lexer) scan() {
-	for state := lexTextBlock; state != nil; {
-		state = state(l)
-
-		if l.err != nil {
-			break
-		}
-	}
-
+	lexText(l)
 	close(l.tokens)
+	close(l.err)
 }
 
 // : from, to    :                  [-----]
@@ -119,10 +122,6 @@ func (l *lexer) bufferAt(pos int) rune {
 }
 
 func (l *lexer) next() rune {
-	if l.err != nil {
-		return eofRune
-	}
-
 	if l.pos < l.bufTo {
 		r := l.bufferAt(l.pos)
 		l.pos++
@@ -132,7 +131,7 @@ func (l *lexer) next() rune {
 	r, _, err := l.ReadRune()
 	if err != nil {
 		if err != io.EOF {
-			l.err = err
+			l.err <- err
 		}
 
 		return eofRune
@@ -155,7 +154,7 @@ func (l *lexer) backup() {
 
 func (l *lexer) move(pos int) {
 	if pos < l.bufFrom {
-		panic("cannot backtrack before current unfinished token")
+		panic("cannot backtrack before current working token")
 	}
 
 	l.pos = pos
@@ -167,7 +166,10 @@ func (l *lexer) backupAmount(amt int) {
 
 func (l *lexer) peek() rune {
 	r := l.next()
-	l.backup()
+
+	if r != eofRune {
+		l.backup()
+	}
 
 	return r
 }
@@ -177,7 +179,13 @@ func (l *lexer) emit(tt tokenType) {
 	value, l.buf = string(l.bufferSlice(l.bufFrom, l.pos)), l.bufferSlice(l.pos, l.bufTo)
 	l.bufFrom = l.pos
 
-	l.tokens <- Token{tt, value}
+	if len(value) > 0 || tt == EOFToken {
+		l.tokens <- Token{tt, value}
+	}
+}
+
+func (l *lexer) errorf(format string, args ...any) {
+	l.err <- fmt.Errorf(format, args...)
 }
 
 func (l *lexer) ignore() {
@@ -200,7 +208,6 @@ func (l *lexer) acceptSeq(valid string) bool {
 	for _, validRune := range valid {
 		r := l.next()
 		if validRune != r {
-			l.err = fmt.Errorf(`expected "%s" but got "%v"`, valid, r)
 			return false
 		}
 	}
@@ -240,26 +247,25 @@ func (l *lexer) acceptWhile(validFunc func(rune) bool) int {
 	return size
 }
 
-type stateFunc func(*lexer) stateFunc
-
-func lexEOF(l *lexer) stateFunc {
-	return nil
-}
-
-func lexTextBlock(l *lexer) stateFunc {
-	// lexBlockNode
-
+func lexText(l *lexer) {
 	for {
 		r := l.peek()
 
-		if r == '#' {
-			nodeStart := l.cursor()
+		switch r {
+		case eofRune:
+			l.emit(TextToken)
 
-			l.acceptSeq("#")
+			l.emit(EOFToken)
+			return
+		case '#':
+			// Tries to tokenize an element
+			elementStart := l.cursor()
+
+			l.next()
 			l.acceptWhile(func(r rune) bool {
 				return unicode.IsLetter(r) || unicode.IsDigit(r) || r == '-' || r == '_'
 			})
-			nodeEnd := l.cursor()
+			elementEnd := l.cursor()
 
 			l.acceptAnyRepeated(" ")
 			spacesEnd := l.cursor()
@@ -267,34 +273,57 @@ func lexTextBlock(l *lexer) stateFunc {
 			newDepth := l.acceptAnyRepeated("{")
 			bracesEnd := l.cursor()
 
-			depth := l.escapeDepth.Top()
-			if newDepth >= depth {
-				l.move(nodeStart) // finish previous text token
-				l.emit(textToken)
+			depth := l.bracesStack.Top()
+			if newDepth >= depth { // if there are enough braces then accept the element token
+				l.move(elementStart) // finish previous text token
+				l.emit(TextToken)
 
-				l.move(nodeEnd) // emit node token
-				l.emit(nodeToken)
+				l.move(elementEnd) // emit element token
+				l.emit(ElementToken)
 
 				l.move(spacesEnd) // skip whitespace
 				l.ignore()
 
 				l.move(bracesEnd) // emit new open brace token
-				l.emit(braceOpenToken)
+				l.emit(BraceOpenToken)
 
-				if newDepth > depth {
-					l.escapeDepth.Push(newDepth)
+				l.bracesStack.Push(newDepth)
+			}
+		case '}':
+			bracesStart := l.cursor()
+
+			braceCount := l.acceptAnyRepeated("}")
+			depth := l.bracesStack.Top()
+			if braceCount == depth {
+				l.move(bracesStart)
+				l.emit(TextToken)
+
+				l.move(bracesStart + braceCount)
+				l.emit(BraceCloseToken)
+
+				l.bracesStack.Pop()
+
+				if l.peek() == '{' { // check if there is another argument for this element
+					newDepth := l.acceptAnyRepeated("{")
+					bracesEnd := l.cursor()
+
+					depth := l.bracesStack.Top()
+					if newDepth >= depth { // if there are enough braces then accept the element token
+						l.move(bracesEnd)
+						l.emit(BraceOpenToken)
+
+						l.bracesStack.Push(newDepth)
+					}
 				}
-
-				return lexTextInline
+			} else {
+				if braceCount > depth {
+					l.emit(EOFToken)
+					l.errorf("too many braces")
+					return
+				}
 			}
 		}
 
-		if l.next() == eofRune {
-			return lexEOF
-		}
+		l.next()
 	}
-}
-
-func lexTextInline(l *lexer) stateFunc {
-	return lexEOF
 }

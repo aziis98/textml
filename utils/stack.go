@@ -4,12 +4,16 @@ type Stack[T any] struct {
 	stack []T
 }
 
-func NewStack[T any]() *Stack[T] {
-	return &Stack[T]{stack: []T{}}
+func NewStack[T any](initialValues ...T) *Stack[T] {
+	return &Stack[T]{stack: append([]T{}, initialValues...)}
 }
 
 func (s *Stack[T]) Top() T {
 	return s.stack[len(s.stack)-1]
+}
+
+func (s *Stack[T]) Peek(offset int) T {
+	return s.stack[len(s.stack)-offset]
 }
 
 func (s *Stack[T]) Push(value T) {
