@@ -2,7 +2,6 @@ package parser_test
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 	"testing"
 
@@ -21,7 +20,70 @@ func TestParser1(t *testing.T) {
 	assert.Nil(t, err)
 
 	doc, _ := json.MarshalIndent(document, "", "  ")
-	fmt.Println(string(doc))
+
+	assert.Equal(t, strings.TrimSpace(`
+{
+  "children": [
+    {
+      "type": "element",
+      "name": "sum",
+      "arguments": [
+        {
+          "children": [
+            {
+              "type": "text",
+              "text": " 1 "
+            }
+          ]
+        },
+        {
+          "children": [
+            {
+              "type": "text",
+              "text": " 2 "
+            }
+          ]
+        },
+        {
+          "children": [
+            {
+              "type": "text",
+              "text": " "
+            },
+            {
+              "type": "element",
+              "name": "sum",
+              "arguments": [
+                {
+                  "children": [
+                    {
+                      "type": "text",
+                      "text": " 3 "
+                    }
+                  ]
+                },
+                {
+                  "children": [
+                    {
+                      "type": "text",
+                      "text": " 4 "
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "text": " "
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}`),
+		string(doc),
+	)
 }
 
 func TestPaser2(t *testing.T) {
@@ -34,5 +96,44 @@ func TestPaser2(t *testing.T) {
 	assert.Nil(t, err)
 
 	doc, _ := json.MarshalIndent(document, "", "  ")
-	fmt.Println(string(doc))
+
+	assert.Equal(t, strings.TrimSpace(`
+{
+  "children": [
+    {
+      "type": "element",
+      "name": "code",
+      "arguments": [
+        {
+          "children": [
+            {
+              "type": "text",
+              "text": " "
+            },
+            {
+              "type": "element",
+              "name": "format",
+              "arguments": [
+                {
+                  "children": [
+                    {
+                      "type": "text",
+                      "text": " js "
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "text": " let x = \"#node{ 1 }\"; "
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}`),
+		string(doc),
+	)
 }

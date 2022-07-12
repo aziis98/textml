@@ -19,19 +19,14 @@ type Block struct {
 	Children []*Node `json:"children"`
 }
 
-type TextNode struct {
-	Text string `json:"text"`
-}
-
-type ElementNode struct {
-	Name string   `json:"name"`
-	Args []*Block `json:"arguments"`
-}
-
 // Node is an enum of text or element nodes
 type Node struct {
-	Type  string `json:"type"`
-	Value any    `json:"value"`
+	Type string `json:"type"`
+
+	Text string `json:"text,omitempty"`
+
+	Name string   `json:"name,omitempty"`
+	Args []*Block `json:"arguments,omitempty"`
 }
 
 func ParseDocument(ts []lexer.Token) (*Block, error) {
@@ -43,11 +38,11 @@ func ParseDocument(ts []lexer.Token) (*Block, error) {
 		case lexer.TextToken:
 			ts = ts[1:]
 			children = append(children, &Node{
-				Type:  NodeTypes.Text,
-				Value: &TextNode{t.Value},
+				Type: NodeTypes.Text,
+				Text: t.Value,
 			})
 		case lexer.ElementToken:
-			var elt *ElementNode
+			var elt *Node
 			var err error
 
 			elt, ts, err = ParseElement(ts)
@@ -56,10 +51,7 @@ func ParseDocument(ts []lexer.Token) (*Block, error) {
 				return nil, err
 			}
 
-			children = append(children, &Node{
-				Type:  NodeTypes.Element,
-				Value: elt,
-			})
+			children = append(children, elt)
 		default:
 			fmt.Printf("rest: %v\n", ts)
 			return nil, fmt.Errorf("[document] expected text or element, got: %v", t)
@@ -71,7 +63,7 @@ func ParseDocument(ts []lexer.Token) (*Block, error) {
 	return &Block{children}, nil
 }
 
-func ParseElement(ts []lexer.Token) (*ElementNode, []lexer.Token, error) {
+func ParseElement(ts []lexer.Token) (*Node, []lexer.Token, error) {
 	if len(ts) == 0 {
 		return nil, ts, fmt.Errorf("[element] not enough tokens")
 	}
@@ -102,7 +94,8 @@ func ParseElement(ts []lexer.Token) (*ElementNode, []lexer.Token, error) {
 		t = ts[0]
 	}
 
-	return &ElementNode{
+	return &Node{
+		Type: NodeTypes.Element,
 		Name: name,
 		Args: blocks,
 	}, ts, nil
@@ -133,11 +126,11 @@ func ParseArgument(ts []lexer.Token) (*Block, []lexer.Token, error) {
 		case lexer.TextToken:
 			ts = ts[1:]
 			children = append(children, &Node{
-				Type:  NodeTypes.Text,
-				Value: &TextNode{t.Value},
+				Type: NodeTypes.Text,
+				Text: t.Value,
 			})
 		case lexer.ElementToken:
-			var elt *ElementNode
+			var elt *Node
 			var err error
 
 			elt, ts, err = ParseElement(ts)
@@ -145,10 +138,7 @@ func ParseArgument(ts []lexer.Token) (*Block, []lexer.Token, error) {
 				return nil, ts, err
 			}
 
-			children = append(children, &Node{
-				Type:  NodeTypes.Element,
-				Value: elt,
-			})
+			children = append(children, elt)
 		default:
 			return nil, ts, fmt.Errorf("[argument] expected text or element, got: %v", t)
 		}
