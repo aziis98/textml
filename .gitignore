@@ -4,4 +4,4 @@ node_modules/
 *.local*
 
 # Main executable
-textml
+bin/
