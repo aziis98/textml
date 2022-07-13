@@ -19,45 +19,39 @@ func TestParser1(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.Equal(t, &parser.Block{
-		Children: []*parser.Node{
-			{
-				Type: parser.NodeTypes.Element,
+		Children: []parser.BlockNode{
+			&parser.ElementNode{
 				Name: "sum",
 				Args: []*parser.Block{
 					{
-						Children: []*parser.Node{
-							{
-								Type: parser.NodeTypes.Text,
+						Children: []parser.BlockNode{
+							&parser.TextNode{
 								Text: "1",
 							},
 						},
 					},
 					{
-						Children: []*parser.Node{
-							{
-								Type: parser.NodeTypes.Text,
+						Children: []parser.BlockNode{
+							&parser.TextNode{
 								Text: "2",
 							},
 						},
 					},
 					{
-						Children: []*parser.Node{
-							{
-								Type: parser.NodeTypes.Element,
+						Children: []parser.BlockNode{
+							&parser.ElementNode{
 								Name: "sum",
 								Args: []*parser.Block{
 									{
-										Children: []*parser.Node{
-											{
-												Type: parser.NodeTypes.Text,
+										Children: []parser.BlockNode{
+											&parser.TextNode{
 												Text: "3",
 											},
 										},
 									},
 									{
-										Children: []*parser.Node{
-											{
-												Type: parser.NodeTypes.Text,
+										Children: []parser.BlockNode{
+											&parser.TextNode{
 												Text: "4",
 											},
 										},
@@ -82,29 +76,25 @@ func TestPaser2(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.Equal(t, &parser.Block{
-		Children: []*parser.Node{
-			{
-				Type: parser.NodeTypes.Element,
+		Children: []parser.BlockNode{
+			&parser.ElementNode{
 				Name: "code",
 				Args: []*parser.Block{
 					{
-						Children: []*parser.Node{
-							{
-								Type: parser.NodeTypes.Element,
+						Children: []parser.BlockNode{
+							&parser.ElementNode{
 								Name: "format",
 								Args: []*parser.Block{
 									{
-										Children: []*parser.Node{
-											{
-												Type: parser.NodeTypes.Text,
+										Children: []parser.BlockNode{
+											&parser.TextNode{
 												Text: "js",
 											},
 										},
 									},
 								},
 							},
-							{
-								Type: parser.NodeTypes.Text,
+							&parser.TextNode{
 								Text: ` let x = "#node{ 1 }";`,
 							},
 						},

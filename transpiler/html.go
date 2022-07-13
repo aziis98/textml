@@ -55,7 +55,7 @@ func (h *Html) writeElement(w io.Writer, elem, s string) error {
 	return nil
 }
 
-func (h *Html) writeElementOpenning(w io.Writer, elem string, attrs map[string]string) error {
+func (h *Html) writeElementOpening(w io.Writer, elem string, attrs map[string]string) error {
 	f := "<%s%s>\n"
 	if h.Inline {
 		f = "<%s%s>\n"
@@ -86,7 +86,7 @@ func (h *Html) writeElementClosing(w io.Writer, elem string) error {
 	return nil
 }
 
-func (h *Html) TranspileElement(w io.Writer, element string, node *parser.Node) error {
+func (h *Html) TranspileElement(w io.Writer, element string, node *parser.ElementNode) error {
 	args := node.Args
 	if len(args) > 2 {
 		return fmt.Errorf(`invalid number of arguments for element "%q"`, element)
@@ -99,12 +99,12 @@ func (h *Html) TranspileElement(w io.Writer, element string, node *parser.Node) 
 		attrs, args = args[0], args[1:]
 
 		for _, n := range attrs.Children {
-			if n.Type == parser.NodeTypes.Element {
-				key := n.Name
+			if elm, ok := n.(*parser.ElementNode); ok {
+				key := elm.Name
 
 				value := ""
-				if len(n.Args) > 0 {
-					value = BlockTextContent(n.Args[0])
+				if len(elm.Args) > 0 {
+					value = BlockTextContent(elm.Args[0])
 				}
 
 				htmlAttributes[key] = value
@@ -112,7 +112,7 @@ func (h *Html) TranspileElement(w io.Writer, element string, node *parser.Node) 
 		}
 	}
 
-	if err := h.writeElementOpenning(w, element, htmlAttributes); err != nil {
+	if err := h.writeElementOpening(w, element, htmlAttributes); err != nil {
 		return err
 	}
 
@@ -130,18 +130,19 @@ func (h *Html) TranspileElement(w io.Writer, element string, node *parser.Node) 
 
 func (h *Html) TranspileBlock(w io.Writer, block *parser.Block) error {
 	for _, node := range block.Children {
-		if node.Type == parser.NodeTypes.Element {
-			if htmlName, ok := htmlElements[node.Name]; ok {
-				if err := h.TranspileElement(w, htmlName, node); err != nil {
+		if elm, ok := node.(*parser.ElementNode); ok {
+			if htmlName, ok := htmlElements[elm.Name]; ok {
+				if err := h.TranspileElement(w, htmlName, elm); err != nil {
 					return err
 				}
 			} else {
-				return fmt.Errorf("invalid html element with name %q", node.Name)
+				return fmt.Errorf("invalid html element with name %q", elm.Name)
 			}
-		} else {
-			if len(strings.TrimSpace(node.Text)) > 0 {
+		}
+		if n, ok := node.(*parser.TextNode); ok {
+			if len(strings.TrimSpace(n.Text)) > 0 {
 				if _, err := fmt.Fprintf(w, "%s\n",
-					html.EscapeString(strings.TrimSpace(node.Text))); err != nil {
+					html.EscapeString(strings.TrimSpace(n.Text))); err != nil {
 					return err
 				}
 			}

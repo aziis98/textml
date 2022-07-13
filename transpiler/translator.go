@@ -14,7 +14,7 @@ func BlockTextContent(b *parser.Block) string {
 	s := ""
 
 	for _, n := range b.Children {
-		if n.Type == parser.NodeTypes.Text {
+		if n, ok := n.(*parser.TextNode); ok {
 			s += n.Text
 		}
 	}
