@@ -149,7 +149,7 @@ type Lexer interface {
 func newPythonLikeLexer(tokens chan<- Token) {
     return indented.New(&indented.Config{
         // called on the "line" before the indentation increment
-        PreIdentationStart: func(l Lexer) error {
+        PreIndentationStart: func(l Lexer) error {
             if err := l.Expect("block:"); err != nil {
                 return err
             }
@@ -158,7 +158,7 @@ func newPythonLikeLexer(tokens chan<- Token) {
             tokens <- Token{ Type: "block-begin", Value: "" }
             return nil
         },
-        // called after the indentaion block ends (might be called multiple times if the indentation decreases by more than one level)
+        // called after the indentation block ends (might be called multiple times if the indentation decreases by more than one level)
         IndentationEnd: func(l Lexer) error {
             tokens <- Token{ Type: "block-end", Value: "" }
         },

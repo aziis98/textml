@@ -44,7 +44,7 @@ A **document** is composed of various _blocks_ that can also be nested. A **bloc
 
 ## Usage
 
-For now there is a small CLI used for reading `textml` files and translating it to other common formats. For now you must pass a file and use one of the follwoing command line options
+For now there is a small CLI used for reading `textml` files and translating it to other common formats. For now you must pass a file and use one of the following command line options
 
 -   `--format`, `-f`: Set a format, available formats are
 
@@ -52,7 +52,7 @@ For now there is a small CLI used for reading `textml` files and translating it 
 
     -   `json`: Converts the parsed document to JSON
 
-    -   `inline-json`: As previos but inlined
+    -   `inline-json`: As previous but inlined
 
     -   `transpile.html`: A simple semantic to convert `#html.ELEMENT { ... }` to the corresponding HTML element. This will get a major write pretty soon.
 
