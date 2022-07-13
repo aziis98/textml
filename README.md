@@ -10,9 +10,11 @@ A **document** is composed of various _blocks_ that can also be nested. A **bloc
 #document {
     #title { This is a short title }
 
-    This is a paragraph with some text and #bold{ bold } and #italic{ italic } formatting.
+    This is a paragraph with some text and #bold{ bold } and
+    #italic{ italic } formatting.
 
-    Elements can also have multiple argument as #link{this link to wikipedia}{https://en.wikipedia.org/}
+    Elements can also have multiple argument as #link{this link
+    to wikipedia}{https://en.wikipedia.org/}
 
     #subtitle { Another section }
 
@@ -80,7 +82,10 @@ One of the next thing I will start working on is a way to use this language as a
     #body {
         <main>
             <h1>Title</h1>
-            <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Debitis, odio.</p>
+            <p>
+                Lorem ipsum dolor sit amet consectetur adipisicing
+                elit. Debitis, odio.
+            </p>
 
             #my.button-primary{ Ok }
             #my.button{ Other }
