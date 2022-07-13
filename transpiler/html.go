@@ -6,7 +6,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/aziis98/go-text-ml/parser"
+	"github.com/aziis98/textml/parser"
 )
 
 type Html struct {
@@ -104,7 +104,7 @@ func (h *Html) TranspileElement(w io.Writer, element string, node *parser.Elemen
 
 				value := ""
 				if len(elm.Args) > 0 {
-					value = BlockTextContent(elm.Args[0])
+					value = elm.Args[0].TextContent()
 				}
 
 				htmlAttributes[key] = value

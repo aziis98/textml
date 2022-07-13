@@ -7,9 +7,9 @@ import (
 	"os"
 
 	"github.com/alecthomas/repr"
-	"github.com/aziis98/go-text-ml/lexer"
-	"github.com/aziis98/go-text-ml/parser"
-	"github.com/aziis98/go-text-ml/transpiler"
+	"github.com/aziis98/textml/lexer"
+	"github.com/aziis98/textml/parser"
+	"github.com/aziis98/textml/transpiler"
 	flag "github.com/spf13/pflag"
 )
 

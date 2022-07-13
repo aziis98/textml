@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/aziis98/go-text-ml/lexer"
+	"github.com/aziis98/textml/lexer"
 )
 
 type Node interface {
@@ -14,6 +14,18 @@ type Node interface {
 // Block is a list of nodes
 type Block struct {
 	Children []Node `json:"children"`
+}
+
+func (b *Block) TextContent() string {
+	s := ""
+
+	for _, n := range b.Children {
+		if n, ok := n.(*TextNode); ok {
+			s += n.Text
+		}
+	}
+
+	return s
 }
 
 type TextNode struct {

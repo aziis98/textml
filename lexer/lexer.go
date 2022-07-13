@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/aziis98/go-text-ml/utils"
+	"github.com/aziis98/textml/utils"
 )
 
 type tokenType int

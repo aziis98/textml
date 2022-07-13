@@ -1,4 +1,4 @@
-module github.com/aziis98/go-text-ml
+module github.com/aziis98/textml
 
 go 1.18
 
