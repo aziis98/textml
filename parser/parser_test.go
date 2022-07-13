@@ -19,38 +19,38 @@ func TestParser1(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.Equal(t, &parser.Block{
-		Children: []parser.BlockNode{
+		Children: []parser.Node{
 			&parser.ElementNode{
 				Name: "sum",
 				Args: []*parser.Block{
 					{
-						Children: []parser.BlockNode{
+						Children: []parser.Node{
 							&parser.TextNode{
 								Text: "1",
 							},
 						},
 					},
 					{
-						Children: []parser.BlockNode{
+						Children: []parser.Node{
 							&parser.TextNode{
 								Text: "2",
 							},
 						},
 					},
 					{
-						Children: []parser.BlockNode{
+						Children: []parser.Node{
 							&parser.ElementNode{
 								Name: "sum",
 								Args: []*parser.Block{
 									{
-										Children: []parser.BlockNode{
+										Children: []parser.Node{
 											&parser.TextNode{
 												Text: "3",
 											},
 										},
 									},
 									{
-										Children: []parser.BlockNode{
+										Children: []parser.Node{
 											&parser.TextNode{
 												Text: "4",
 											},
@@ -76,17 +76,17 @@ func TestPaser2(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.Equal(t, &parser.Block{
-		Children: []parser.BlockNode{
+		Children: []parser.Node{
 			&parser.ElementNode{
 				Name: "code",
 				Args: []*parser.Block{
 					{
-						Children: []parser.BlockNode{
+						Children: []parser.Node{
 							&parser.ElementNode{
 								Name: "format",
 								Args: []*parser.Block{
 									{
-										Children: []parser.BlockNode{
+										Children: []parser.Node{
 											&parser.TextNode{
 												Text: "js",
 											},

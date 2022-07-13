@@ -7,32 +7,20 @@ import (
 	"github.com/aziis98/go-text-ml/lexer"
 )
 
-type BlockNode interface {
-	Type() string
+type Node interface {
+	nodeType()
 }
 
 // Block is a list of nodes
 type Block struct {
-	Children []BlockNode `json:"children"`
+	Children []Node `json:"children"`
 }
-
-// // Node is an enum of text or element nodes
-// type Node struct {
-// 	Type string `json:"type"`
-
-// 	Text string `json:"text,omitempty"`
-
-// 	Name string   `json:"name,omitempty"`
-// 	Args []*Block `json:"arguments,omitempty"`
-// }
 
 type TextNode struct {
 	Text string
 }
 
-func (_ *TextNode) Type() string {
-	return "text"
-}
+func (_ *TextNode) nodeType() {}
 
 func (n *TextNode) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]any{
@@ -46,9 +34,7 @@ type ElementNode struct {
 	Args []*Block
 }
 
-func (_ *ElementNode) Type() string {
-	return "element"
-}
+func (_ *ElementNode) nodeType() {}
 
 func (n *ElementNode) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]any{
@@ -59,7 +45,7 @@ func (n *ElementNode) MarshalJSON() ([]byte, error) {
 }
 
 func ParseDocument(ts []lexer.Token) (*Block, error) {
-	children := []BlockNode{}
+	children := []Node{}
 
 	t := ts[0]
 	for len(ts) > 0 && t.Type != lexer.EOFToken {
@@ -68,7 +54,7 @@ func ParseDocument(ts []lexer.Token) (*Block, error) {
 			ts = ts[1:]
 			children = append(children, &TextNode{Text: t.Value})
 		case lexer.ElementToken:
-			var elt BlockNode
+			var elt Node
 			var err error
 
 			elt, ts, err = ParseElement(ts)
@@ -89,7 +75,7 @@ func ParseDocument(ts []lexer.Token) (*Block, error) {
 	return &Block{children}, nil
 }
 
-func ParseElement(ts []lexer.Token) (BlockNode, []lexer.Token, error) {
+func ParseElement(ts []lexer.Token) (Node, []lexer.Token, error) {
 	if len(ts) == 0 {
 		return nil, ts, fmt.Errorf("[element] not enough tokens")
 	}
@@ -133,7 +119,7 @@ func ParseArgument(ts []lexer.Token) (*Block, []lexer.Token, error) {
 
 	ts = ts[1:]
 
-	children := []BlockNode{}
+	children := []Node{}
 
 	for {
 		if len(ts) == 0 {
@@ -152,7 +138,7 @@ func ParseArgument(ts []lexer.Token) (*Block, []lexer.Token, error) {
 			ts = ts[1:]
 			children = append(children, &TextNode{t.Value})
 		case lexer.ElementToken:
-			var elt BlockNode
+			var elt Node
 			var err error
 
 			elt, ts, err = ParseElement(ts)
