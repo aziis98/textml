@@ -1,6 +1,77 @@
 # Ideas
 
-List of some random ideas for using this language
+List of some random ideas for using this language (top are more recent)
+
+## Multiple Runtimes
+
+The CLI could support multiple runtimes like git with `textml RUNTIME`. Some examples are
+
+-   `textml build`
+
+    This runtime/environment reads a file called `build.tml` in the current directory and runs it like a `Makefile` (but somehow also with support for fan-out and fan-in).
+
+    ```
+    #rule{
+        #inputs{ articles/*.tml }
+
+        #input { articles/:name.tml }
+        #output { dist/articles/:name.html }
+
+        textml transpile -f html "#{ INPUT }" -o "#{ OUTPUT }"
+    }
+
+    #rule {
+        #inputs { articles/*.tml }
+        #output { dist/tags.json }
+
+        ...extract from each article metadata its tags and create a "tags.json" file mapping each tag to a list of article ids with that tag...
+    }
+
+    #rule {
+        #input { dist/tags.json }
+        #outputs { dist/tags/*.html }
+
+        ...for each tag in "tags.json" generate a corresponding page with links to every article containing that tag.
+    }
+    ```
+
+-   `textml transpile -f FORMAT FILES...` to transpile files to other formats.
+
+-   `textml query -e EXPRESSION FILES...` to query TML files with various selectors.
+
+## Content Embedding / File Processing
+
+```
+#asset{ styles/main.css }{{
+    html, body {
+        margin: 0;
+        min-height: 100vh;
+    }
+}}
+
+#file{ example.txt }{
+    #build.pipe-content{ fold -w 40 }
+
+    Lorem ipsum dolor sit amet consectetur, adipisicing elit. Consequatur repellat cupiditate dolor ut, fuga recusandae quos vitae, ea necessitatibus dolores quam tenetur minima tempora eum numquam inventore suscipit vero consequuntur?
+}
+```
+
+## Lisp-embedding
+
+Clearly this is equivalent to _M-expressions_, for example
+
+```
+#defun{ sum }{ #params{ list } }{
+    #if-else{ #eq{ #length{ list } }{ 0 } }{
+        #of{ list }{ 0 }
+    }{
+        #plus{ #of{ list }{ 0 } }{ #sum{ #slice{ list }{ 1 } } }
+    }
+}
+
+#set{ list-1 }{ #list{ 1 }{ 2 }{ 3 } }
+#println{ #sum{ list-1 } }
+```
 
 ## As a tree/text transformation utility
 
@@ -135,38 +206,4 @@ func newPythonLikeLexer(tokens chan<- Token) {
             Item 7
         @item:
             Item 8
-```
-
-## Lisp-embedding
-
-Clearly this is equivalent to _M-expressions_, for example
-
-```
-#defun{ sum }{ #params{ list } }{
-    #if-else{ #eq{ #length{ list } }{ 0 } }{
-        #of{ list }{ 0 }
-    }{
-        #plus{ #of{ list }{ 0 } }{ #sum{ #slice{ list }{ 1 } } }
-    }
-}
-
-#set{ list-1 }{ #list{ 1 }{ 2 }{ 3 } }
-#println{ #sum{ list-1 } }
-```
-
-## Content Embedding / File Processing
-
-```
-#asset{ styles/main.css }{{
-    html, body {
-        margin: 0;
-        min-height: 100vh;
-    }
-}}
-
-#file{ example.txt }{
-    #build.pipe-content{ fold -w 40 }
-
-    Lorem ipsum dolor sit amet consectetur, adipisicing elit. Consequatur repellat cupiditate dolor ut, fuga recusandae quos vitae, ea necessitatibus dolores quam tenetur minima tempora eum numquam inventore suscipit vero consequuntur?
-}
 ```
