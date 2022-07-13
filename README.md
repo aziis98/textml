@@ -42,6 +42,22 @@ A **document** is composed of various _blocks_ that can also be nested. A **bloc
 }
 ```
 
+## Usage
+
+For now there is a small CLI used for reading `textml` files and translating it to other common formats. For now you must pass a file and use one of the follwoing command line options
+
+-   `--format`, `-f`: Set a format, available formats are
+
+    -   `go`: Uses <https://github.com/alecthomas/repr/> to show the parsed tree structure
+
+    -   `json`: Converts the parsed document to JSON
+
+    -   `inline-json`: As previos but inlined
+
+    -   `transpile.html`: A simple semantic to convert `html.{element}` to the corresponding HTML element. This will get a major write pretty soon.
+
+-   `--output`, `-o`: Set output file or "`-`" for stdout.
+
 ## As a templating language
 
 One of the next thing I will start working on is a way to use this language as a templating language for building HTML pages.
