@@ -1,6 +1,6 @@
-# Text ML
+# textml
 
-My personal _text markup language_. Mostly use this as an alternative to Markdown as I prefer a more structured/extensible language for writing content (And I will never use/setup [MDX](https://mdxjs.com/)).
+My personal textual markup language. Mostly a more structured alternative to Markdown as I prefer a more extensible language for writing content (and I will never use/setup [MDX](https://mdxjs.com/)).
 
 ## Introduction
 
