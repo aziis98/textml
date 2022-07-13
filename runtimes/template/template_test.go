@@ -15,7 +15,7 @@ func dedent(s string) string {
 	return strings.TrimSpace(rg.ReplaceAllString(s, ""))
 }
 
-func Test1(t *testing.T) {
+func TestBasicEvaluation(t *testing.T) {
 	ctx := template.New(&template.Config{})
 
 	doc, err := textml.ParseDocument(strings.NewReader("Lorem ipsum"))
@@ -26,7 +26,7 @@ func Test1(t *testing.T) {
 	assert.Equal(t, "Lorem ipsum", r)
 }
 
-func Test2(t *testing.T) {
+func TestBasicDefine(t *testing.T) {
 	ctx := template.New(&template.Config{})
 
 	doc, err := textml.ParseDocument(strings.NewReader(dedent(`
@@ -38,4 +38,18 @@ func Test2(t *testing.T) {
 	r, err := ctx.Evaluate(doc)
 	assert.Nil(t, err)
 	assert.Equal(t, "\nLorem ipsum", r)
+}
+func TestLastWins(t *testing.T) {
+	ctx := template.New(&template.Config{})
+
+	doc, err := textml.ParseDocument(strings.NewReader(dedent(`
+		#define{ x }{ 1 }
+		#define{ x }{ 2 }
+		#{ x }
+	`)))
+	assert.Nil(t, err)
+
+	r, err := ctx.Evaluate(doc)
+	assert.Nil(t, err)
+	assert.Equal(t, "\n\n2", r)
 }
