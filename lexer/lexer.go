@@ -258,13 +258,12 @@ func lexText(l *lexer) {
 			l.emit(EOFToken)
 			return
 		case '#':
-
 			// Tries to tokenize an element
 			elementStart := l.cursor()
 
 			l.next()
 			l.acceptWhile(func(r rune) bool {
-				return unicode.IsLetter(r) || unicode.IsDigit(r) || r == '-' || r == '_'
+				return unicode.IsLetter(r) || unicode.IsDigit(r) || r == '-' || r == '_' || r == '.'
 			})
 			elementEnd := l.cursor()
 

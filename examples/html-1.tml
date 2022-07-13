@@ -1,0 +1,22 @@
+
+#html.head {
+    #html.title { Example }
+}
+
+#html.body {
+    #html.h1 { A short title }
+    #html.p {
+        Lorem ipsum dolor sit amet consectetur adipisicing elit. Debitis, odio.
+    }
+
+    #html.h2 { Another section }
+    #html.p {
+        Lorem ipsum dolor sit amet consectetur adipisicing elit. Debitis, odio.
+    }
+
+    #html.ul {
+        #html.li { Item 1 }
+        #html.li { Item 2 }
+        #html.li { Item 3 }
+    }
+}

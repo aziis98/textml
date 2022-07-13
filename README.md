@@ -1,10 +1,10 @@
 # Text ML
 
-My personal _text markup language_.
+My personal _text markup language_, I will mostly use this as an alternative to Markdown as I prefer a more structured/extensible language for writing content (And I will never use/setup [MDX](https://mdxjs.com/)).
 
 ## Introduction
 
-A **document** is composed of various nested _blocks_. A **block** can be a piece of _text block_ or a _node block_. For example
+A **document** is composed of various _blocks_ that can also be nested. A **block** can be a of _text node_ or an _element node_. For example a document can be described as follows
 
 ```
 #document {
@@ -42,10 +42,10 @@ A **document** is composed of various nested _blocks_. A **block** can be a piec
 
 ## As a templating language
 
-Let's say we want to use this as a templating language for HTML.
+One of the next thing I will start working on is a way to use this language as a templating language for building HTML pages.
 
 ```
-#layout{ base }{
+#layout{ example-layout }{
     <!DOCTYPE html>
     <html lang="en">
         <head>
@@ -63,7 +63,15 @@ Let's say we want to use this as a templating language for HTML.
 }
 
 #page{ index.html }{
-    #layout { base }
+    #use { example-layout }
+
+    #define{ my.button }{
+        <button class="button">#slot{}</button>
+    }
+
+    #define{ my.button-primary }{
+        <button class="button primary">#slot{}</button>
+    }
 
     #head {
         <link rel="stylesheet" href="styles/main.css">
@@ -73,220 +81,10 @@ Let's say we want to use this as a templating language for HTML.
         <main>
             <h1>Title</h1>
             <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Debitis, odio.</p>
+
+            #my.button-primary{ Ok }
+            #my.button{ Other }
         </main>
     }
 }
 ```
-
-## Reactive GUIs
-
-Counter
-
-```
-#reactive-html {
-    <p>Current value #{ value }</p>
-
-    <button #onclick{ value += 1 }>Increment</button>
-    <button #onclick{ value -= 1 }>Decrement</button>
-}
-```
-
-Todo List
-
-```
-#reactive.html {
-    #html.input {
-        #type { text }
-        #reactive.model { newItemText }
-    }
-
-    #html.button {
-        New Todo
-
-        #onclick { items.push(newItemText) }
-    }
-
-    #html.ul {
-        #each{ i, item }{ items }{
-            #html.li{
-                $item
-
-                #html.button {
-                    Delete
-
-                    #onclick { items.splice(i, 1) }
-                }
-            }
-        }
-    }
-}
-```
-
-## Composable Lexers
-
-```go
-type Lexer interface {
-    Next() (rune, error)
-    Peek() (rune, error)
-    Done() bool
-    Move(pos int) bool
-
-    Expect(s string) error
-}
-
-func newPythonLikeLexer(tokens chan<- Token) {
-    return indented.New(&indented.Config{
-        // called on the "line" before the indentation increment
-        PreIdentationStart: func(l Lexer) error {
-            if err := l.Expect("block:"); err != nil {
-                return err
-            }
-
-            tokens <- Token{ Type: "keyword", Value: "block:" }
-            tokens <- Token{ Type: "block-begin", Value: "" }
-            return nil
-        },
-        // called after the indentaion block ends (might be called multiple times if the indentation decreases by more than one level)
-        IndentationEnd: func(l Lexer) error {
-            tokens <- Token{ Type: "block-end", Value: "" }
-        },
-    })
-}
-```
-
-<!--
-### Python-variant
-
-```
-@document:
-    @title: This is some title
-
-    This is the first block. Lorem ipsum dolor sit amet @bold[consectetur] adipisicing elit. Vitae architecto commodi officia natus ipsam labore fugit nisi quis. Deserunt, dolor @italic[consectetur nisi] placeat repellat velit @strikethrough[assumenda vero sed tenetur] hic.
-
-    @subtitle: This is some title
-
-    This is the second block. Lorem ipsum dolor sit amet consectetur adipisicing elit. Vitae architecto commodi officia natus ipsam labore fugit nisi quis. Deserunt, @link[dolor consectetur nisi][https://en.wikipedia.org/wiki/Main_Page] placeat repellat velit assumenda vero sed tenetur hic.
-
-    @code:
-        @format: js
-        function main() {
-            console.log('Hello, World!')
-        }
-
-        main()
-
-    To embed itself there is the multi-brace construct
-
-    #code::
-        #format[[ text-ml ]]
-
-        This is some raw #code[text-ml]
-
-    @list:
-        @item: Item 1
-        @item: Item 2
-        @item: Item 3
-        @item: Item 4
-        @item:
-            Item 5
-        @item:
-            Item 6
-        @item:
-            Item 7
-        @item:
-            Item 8
-```
-
-### C-variant
-
-```
-#document {
-    #title { This is some title }
-
-    This is the first block. Lorem ipsum dolor sit amet #bold { consectetur } adipisicing elit. Vitae architecto commodi officia natus ipsam labore fugit nisi quis. Deserunt, dolor #italic { consectetur nisi } placeat repellat velit #strikethrough{ assumenda vero sed tenetur } hic.
-
-    #subtitle { This is some title }
-
-    This is the second block. Lorem ipsum dolor sit amet consectetur adipisicing elit. Vitae architecto commodi officia natus ipsam labore fugit nisi quis. Deserunt, #link{ {dolor consectetur nisi} }{ https://en.wikipedia.org/wiki/Main_Page } placeat repellat velit assumenda vero sed tenetur hic.
-
-    #code{
-        #format { js }
-        #theme { solaraized }
-
-        function main() {
-            console.log('Hello, World!')
-        }
-
-        main()
-    }
-
-    To embed itself there is the multi-brace construct
-
-    #code {{
-        #format {{ text-ml }}
-
-        This is some raw #code { text-ml }
-    }}
-
-    -   Item 1
-    -   Item 2
-    -   Item 3
-
-    #list {
-        #item { Item 1 }
-        #item { Item 2 }
-        #item { Item 3 }
-        #item { Item 4 }
-        #item {
-            Item 5
-        }
-        #item {
-            Item 6
-        }
-        #item {
-            Item 7
-        }
-        #item {
-            Item 8
-        }
-    }
-
-    #list-item {
-        fiehffweoi
-    }
-    #list-item {
-        fiehffweoi
-    }
-    #list-item {
-        fiehffweoi
-
-        #list-item {
-            fiehffweoi
-        }
-        #list-item {
-            fiehffweoi
-        }
-        #list-item {
-            fiehffweoi
-        }
-    }
-}
-```
-
-## Lisp-embedding
-
-Clearly this is equivalent to _M-expressions_, for example
-
-```
-#defun{ sum }{ #params{ list } }{
-    #if-else{ #eq{ #length{ list } }{ 0 } }{
-        #of{ list }{ 0 }
-    }{
-        #plus{ #of{ list }{ 0 } }{ #sum{ #slice{ list }{ 1 } } }
-    }
-}
-
-#set{ list-1 }{ #list{ 1 }{ 2 }{ 3 } }
-#println{ #sum{ list-1 } }
-```
--->

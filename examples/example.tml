@@ -1,0 +1,31 @@
+#document {
+    #title { This is a short title }
+
+    This is a paragraph with some text and #bold{ bold } and #italic{ italic } formatting.
+
+    Elements can also have multiple argument as #link{this link to wikipedia}{https://en.wikipedia.org/}
+
+    #subtitle { Another section }
+
+    Code blocks can be easily nested and annotated, for example
+
+    #code {{
+        #format {{ textml }}
+
+        #document {
+            #title { Example }
+
+            With #underline{some text}
+        }
+    }}
+
+    As long as braces are balanced any meta-depth can be reached.
+
+    #code {{{
+        #code {{
+            #code {
+                let x = 1;
+            }
+        }}
+    }}}
+}
