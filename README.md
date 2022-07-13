@@ -54,7 +54,7 @@ For now there is a small CLI used for reading `textml` files and translating it 
 
     -   `inline-json`: As previos but inlined
 
-    -   `transpile.html`: A simple semantic to convert `html.{element}` to the corresponding HTML element. This will get a major write pretty soon.
+    -   `transpile.html`: A simple semantic to convert `#html.ELEMENT { ... }` to the corresponding HTML element. This will get a major write pretty soon.
 
 -   `--output`, `-o`: Set output file or "`-`" for stdout.
 
