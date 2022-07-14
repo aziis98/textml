@@ -1,0 +1,12 @@
+
+#define{ base-layout }{ Document(#{ body }) }
+
+#define{ article-layout }{
+    #extends{ base-layout }
+    #define{ body }{ Article(#{ article.body }) }
+}
+
+#extends{ article-layout }
+#define{ x }{ Test }
+
+#define{ article.body }{ Example #{ x } #{ x } }

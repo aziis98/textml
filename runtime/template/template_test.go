@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/aziis98/textml"
-	"github.com/aziis98/textml/runtimes/template"
+	"github.com/aziis98/textml/runtime/template"
 	"github.com/stretchr/testify/assert"
 )
 
