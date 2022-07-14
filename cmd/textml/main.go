@@ -22,8 +22,8 @@ func init() {
 const usage = `usage: textml COMMAND ...
 
 Commands:
-	transpile	Used to read .tml files and convert them to other formats
-	template	Use textml as a templating language
+	transpile   Used to read .tml files and convert them to other formats
+	template    Use textml as a templating language
 `
 
 func main() {
@@ -34,17 +34,37 @@ func main() {
 
 	switch os.Args[1] {
 	case "transpile":
-		transpileCmd := flag.NewFlagSet("transpile", flag.ExitOnError)
-		listFormats := transpileCmd.Bool("list-formats", false, "Display available formats")
-		format := transpileCmd.StringP(
-			"format", "f", "repr", `output format of the parsed file`,
-		)
-		output := transpileCmd.StringP(
-			"output", "o", "-", `output file, "-" is stdout`,
-		)
-		transpileCmd.Parse(os.Args[2:])
+		cmd := flag.NewFlagSet("transpile", flag.ExitOnError)
+		cmd.Usage = func() {
+			fmt.Printf("usage: textml transpile [-f FORMAT] FILE\n\n")
+			cmd.PrintDefaults()
+		}
 
-		if *listFormats {
+		// Options
+		var listFormats bool
+		cmd.BoolVar(&listFormats, "list-formats", false, "Display available formats")
+
+		var format string
+		cmd.StringVarP(&format, "format", "f", "repr", `output format of the parsed file`)
+
+		var output string
+		cmd.StringVarP(&output, "output", "o", "-", `output file, "-" is stdout`)
+
+		showHelp := false
+		cmd.BoolVarP(&showHelp, "help", "h", false, "Display help text")
+
+		if err := cmd.Parse(os.Args[2:]); err != nil {
+			if err != flag.ErrHelp {
+				log.Fatal(err)
+			}
+		}
+
+		if showHelp || cmd.NArg() == 0 {
+			cmd.Usage()
+			os.Exit(0)
+		}
+
+		if listFormats {
 			fmt.Printf("Available formats:\n")
 			for format, _ := range transpile.Registry {
 				fmt.Printf("- %q\n", format)
@@ -54,8 +74,8 @@ func main() {
 		}
 
 		outputFile := os.Stdout
-		if *output != "-" {
-			f, err := os.Create(*output)
+		if output != "-" {
+			f, err := os.Create(output)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -63,26 +83,39 @@ func main() {
 			outputFile = f
 		}
 
-		if transpileCmd.NArg() == 0 {
-			log.Fatal("invalid number of arguments")
-		}
-
-		inputFile, err := os.Open(transpileCmd.Arg(0))
+		inputFile, err := os.Open(cmd.Arg(0))
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		commandTranspile(inputFile, outputFile, *format)
+		commandTranspile(inputFile, outputFile, format)
 	case "template":
-		templateCmd := flag.NewFlagSet("template", flag.ExitOnError)
-		output := templateCmd.StringP(
-			"output", "o", "-", `output file, "-" is stdout`,
-		)
-		templateCmd.Parse(os.Args[2:])
+		cmd := flag.NewFlagSet("template", flag.ExitOnError)
+		cmd.Usage = func() {
+			fmt.Printf("usage: textml template [--output|-o OUTPUT] FILES...\n\n")
+			cmd.PrintDefaults()
+		}
+
+		var output string
+		cmd.StringVarP(&output, "output", "o", "-", `output file, "-" is stdout`)
+
+		var showHelp bool
+		cmd.BoolVarP(&showHelp, "help", "h", false, "Display help text")
+
+		if err := cmd.Parse(os.Args[2:]); err != nil {
+			if err != flag.ErrHelp {
+				log.Fatal(err)
+			}
+		}
+
+		if showHelp || cmd.NArg() == 0 {
+			cmd.Usage()
+			os.Exit(0)
+		}
 
 		outputFile := os.Stdout
-		if *output != "-" {
-			f, err := os.Create(*output)
+		if output != "-" {
+			f, err := os.Create(output)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -90,7 +123,7 @@ func main() {
 			outputFile = f
 		}
 
-		inputFile, err := os.Open(templateCmd.Arg(0))
+		inputFile, err := os.Open(cmd.Arg(0))
 		if err != nil {
 			log.Fatal(err)
 		}
