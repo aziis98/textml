@@ -2,6 +2,58 @@
 
 List of some random ideas for using this language (top are more recent)
 
+## Templating language (alternative)
+
+One of the next thing I will start working on is a way to use this language as a templating language for building HTML pages.
+
+```
+#layout{ example-layout }{
+    <!DOCTYPE html>
+    <html lang="en">
+        <head>
+            <meta charset="UTF-8" />
+            <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <title>Example Page</title>
+
+            #slot { head }
+        </head>
+        <body>
+            #slot { body }
+        </body>
+    </html>
+}
+
+#page{ index.html }{
+    #use { example-layout }
+
+    #define{ my.button }{
+        <button class="button">#slot{}</button>
+    }
+
+    #define{ my.button-primary }{
+        <button class="button primary">#slot{}</button>
+    }
+
+    #head {
+        <link rel="stylesheet" href="styles/main.css">
+    }
+
+    #body {
+        <main>
+            <h1>Title</h1>
+            <p>
+                Lorem ipsum dolor sit amet consectetur adipisicing
+                elit. Debitis, odio.
+            </p>
+
+            #my.button-primary{ Ok }
+            #my.button{ Other }
+        </main>
+    }
+}
+```
+
 ## Multiple Runtimes
 
 The CLI could support multiple runtimes like git with `textml RUNTIME`. Some examples are

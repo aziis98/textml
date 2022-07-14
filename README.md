@@ -44,68 +44,13 @@ A **document** is composed of various _blocks_ that can also be nested. A **bloc
 
 ## Usage
 
-For now there is a small CLI used for reading `textml` files and translating it to other common formats. For now you must pass a file and use one of the following command line options
+For now there is a small CLI for working with the various "runtimes"
 
--   `--format`, `-f`: Set a format, available formats are
+- `textml transpile OPTIONS...`
 
-    -   `go`: Uses <https://github.com/alecthomas/repr/> to show the parsed tree structure
+    Used to transpile TextML to other structured formats like json or html.
 
-    -   `json`: Converts the parsed document to JSON
+- `textml template [--output|-o OUTPUT] FILES...`
 
-    -   `inline-json`: As previous but inlined
+    Used to interpret TextML files as templates, for now the only supported directives are `#define{ NAME }{ TEMPLATE }`, `#{ NAME }`, `#import{ FILE }`, `#extends{ NAME }`.
 
-    -   `transpile.html`: A simple semantic to convert `#html.ELEMENT { ... }` to the corresponding HTML element. This will get a major write pretty soon.
-
--   `--output`, `-o`: Set output file or "`-`" for stdout.
-
-## As a templating language
-
-One of the next thing I will start working on is a way to use this language as a templating language for building HTML pages.
-
-```
-#layout{ example-layout }{
-    <!DOCTYPE html>
-    <html lang="en">
-        <head>
-            <meta charset="UTF-8" />
-            <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-            <title>Example Page</title>
-
-            #slot { head }
-        </head>
-        <body>
-            #slot { body }
-        </body>
-    </html>
-}
-
-#page{ index.html }{
-    #use { example-layout }
-
-    #define{ my.button }{
-        <button class="button">#slot{}</button>
-    }
-
-    #define{ my.button-primary }{
-        <button class="button primary">#slot{}</button>
-    }
-
-    #head {
-        <link rel="stylesheet" href="styles/main.css">
-    }
-
-    #body {
-        <main>
-            <h1>Title</h1>
-            <p>
-                Lorem ipsum dolor sit amet consectetur adipisicing
-                elit. Debitis, odio.
-            </p>
-
-            #my.button-primary{ Ok }
-            #my.button{ Other }
-        </main>
-    }
-}
-```

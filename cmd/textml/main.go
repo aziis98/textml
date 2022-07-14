@@ -2,15 +2,14 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"strings"
 
-	"github.com/alecthomas/repr"
 	"github.com/aziis98/textml"
 	"github.com/aziis98/textml/runtime/template"
-	"github.com/aziis98/textml/transpiler"
+	"github.com/aziis98/textml/runtime/transpile"
 
 	flag "github.com/spf13/pflag"
 )
@@ -36,13 +35,23 @@ func main() {
 	switch os.Args[1] {
 	case "transpile":
 		transpileCmd := flag.NewFlagSet("transpile", flag.ExitOnError)
+		listFormats := transpileCmd.Bool("list-formats", false, "Display available formats")
 		format := transpileCmd.StringP(
-			"format", "f", "go", `output format of the parsed file: go, json, inline-json, transpile.html`,
+			"format", "f", "repr", `output format of the parsed file`,
 		)
 		output := transpileCmd.StringP(
 			"output", "o", "-", `output file, "-" is stdout`,
 		)
 		transpileCmd.Parse(os.Args[2:])
+
+		if *listFormats {
+			fmt.Printf("Available formats:\n")
+			for format, _ := range transpile.Registry {
+				fmt.Printf("- %q\n", format)
+			}
+
+			os.Exit(0)
+		}
 
 		outputFile := os.Stdout
 		if *output != "-" {
@@ -55,7 +64,7 @@ func main() {
 		}
 
 		if transpileCmd.NArg() == 0 {
-			log.Fatal("must pass a file to process")
+			log.Fatal("invalid number of arguments")
 		}
 
 		inputFile, err := os.Open(transpileCmd.Arg(0))
@@ -98,41 +107,9 @@ func commandTranspile(inputFile *os.File, outputFile *os.File, format string) {
 		log.Fatal(err)
 	}
 
-	switch format {
-	case "go":
-		repr.New(outputFile).Println(doc)
-	case "json":
-		bytes, err := json.MarshalIndent(doc, "", "  ")
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		if _, err := outputFile.Write(bytes); err != nil {
-			log.Fatal(err)
-		}
-		if _, err := outputFile.WriteString("\n"); err != nil {
-			log.Fatal(err)
-		}
-	case "inline-json":
-		bytes, err := json.Marshal(doc)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		if _, err := outputFile.Write(bytes); err != nil {
-			log.Fatal(err)
-		}
-		if _, err := outputFile.WriteString("\n"); err != nil {
-			log.Fatal(err)
-		}
-	case "transpile.html":
-		log.Printf("Transpiling %q to HTML...", inputFile.Name())
-
-		htmlTranspiler := &transpiler.Html{Inline: false}
-
-		if err := htmlTranspiler.Transpile(outputFile, doc); err != nil {
-			log.Fatal(err)
-		}
+	transpiler := transpile.Registry[format]
+	if err := transpiler.Transpile(outputFile, doc); err != nil {
+		log.Fatal(err)
 	}
 }
 
