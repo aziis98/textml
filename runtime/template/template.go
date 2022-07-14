@@ -43,6 +43,7 @@ func New(config *Config) *Context {
 
 func (te *Context) Evaluate(block *parser.Block) (string, error) {
 	r := &strings.Builder{}
+	var extendsDirective *string = nil
 
 	for _, n := range block.Children {
 		switch n := n.(type) {
@@ -64,6 +65,13 @@ func (te *Context) Evaluate(block *parser.Block) (string, error) {
 					return "", err
 				}
 
+			case "extends":
+				if len(n.Args) != 1 {
+					return "", fmt.Errorf(`#import expected 1 argument, got %d`, len(n.Args))
+				}
+
+				extendsDirective = new(string)
+				*extendsDirective = n.Args[0].TextContent()
 			case "define":
 				if len(n.Args) != 2 {
 					return "", fmt.Errorf(`#define expected 2 arguments, got %d`, len(n.Args))
@@ -92,6 +100,17 @@ func (te *Context) Evaluate(block *parser.Block) (string, error) {
 		case *parser.TextNode:
 			r.WriteString(n.Text)
 		}
+	}
+
+	if extendsDirective != nil {
+		value := te.Registry[*extendsDirective]
+
+		s, err := te.Evaluate(value)
+		if err != nil {
+			return "", err
+		}
+
+		r.WriteString(s)
 	}
 
 	return r.String(), nil

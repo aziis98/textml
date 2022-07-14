@@ -25,13 +25,13 @@ _./example-layouts.tml_
 }
 
 #define{ article-layout }{
+    #extends{ base-layout }
+    
     #define{ title }{ Article - #{ article.title } }
     #define{ body }{
         <h1>#{ article.title }</h1>
         #{ article.body }
     }
-    
-    #include{ base-layout }
 }
 ```
 
@@ -41,21 +41,31 @@ _./article-1.tml_
 
 ```html
 #import{ ./example-layouts.tml }
+#extends{ base-layout }
 
-#output{
-    #define{ head }{
-        <!-- maybe add KaTeX support just for this page -->
-    }
+#define{ head }{
+    <!-- maybe add KaTeX support just for this page -->
+}
 
-    #define{ article.title }{ Article 1 }
-    #define{ article.body }{
-        <p>Some article</p>
-    }
-
-    #include{ base-layout }
+#define{ article.title }{ Article 1 }
+#define{ article.body }{
+    <p>Some article</p>
 }
 ```
 
 ## Documentation
 
-- `#layout{ NAME }{  }`
+- `#define{ NAME }{ TEMPLATE }` introduces a binding for `NAME` to `TEMPLATE`. Bindings can be used by calling them with `#{ NAME }`.
+
+- `#{ NAME }` replaces the directive with the evaluated string produced from the binding for `NAME`.
+
+- `#extends{ NAME }` works mostly like the previous one but can be used only once during an evaluation and its binding is evaluated at the end and the produced string put at the end.
+
+- `#import{ MODULE }` is used to "include" a module using the provider `LoaderFunc`, for example `FileLoader` reads a file and evaluates it in-place in the current context, the produced string is .
+
+
+
+
+
+
+
