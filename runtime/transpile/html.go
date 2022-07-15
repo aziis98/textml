@@ -39,6 +39,7 @@ var htmlElements = map[string]string{
 	"html.div":     "div",
 	"html.span":    "span",
 	"html.img":     "img",
+	"html.figure":  "figure",
 }
 
 func (h *Html) writeElement(w io.Writer, elem, s string) error {
