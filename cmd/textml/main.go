@@ -66,7 +66,7 @@ func main() {
 
 		if listFormats {
 			fmt.Printf("Available formats:\n")
-			for format, _ := range transpile.Registry {
+			for format := range transpile.Registry {
 				fmt.Printf("- %q\n", format)
 			}
 
