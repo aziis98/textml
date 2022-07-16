@@ -20,13 +20,13 @@ type AttributeNode interface {
 	attributeSeal()
 }
 
+type AttributeMap map[string]AttributeNode
+
 type EmptyAttribute struct{}
 
 func (EmptyAttribute) attributeSeal() {}
 
-func (EmptyAttribute) Write(w io.Writer) error {
-	return nil
-}
+func (EmptyAttribute) Write(w io.Writer) {}
 
 type Attribute struct {
 	Value string
@@ -34,9 +34,8 @@ type Attribute struct {
 
 func (Attribute) attributeSeal() {}
 
-func (a Attribute) Write(w io.Writer) error {
+func (a Attribute) Write(w io.Writer) {
 	fmt.Fprintf(w, `="%s"`, a.Value)
-	return nil
 }
 
 type Element struct {
@@ -61,11 +60,11 @@ func (Element) htmlSeal() {}
 func (n Element) Write(w io.Writer) {
 	attrs := &strings.Builder{}
 	for k, attr := range n.Attributes {
-		fmt.Fprintf(w, " %s", k)
-		attr.Write(w)
+		fmt.Fprintf(attrs, " %s", k)
+		attr.Write(attrs)
 	}
 
-	fmt.Fprintf(w, "<%s%s>", n.TagName, attrs)
+	fmt.Fprintf(w, "<%s%s>", n.TagName, attrs.String())
 
 	for _, child := range n.Children {
 		child.Write(w)

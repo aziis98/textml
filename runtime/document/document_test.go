@@ -12,9 +12,7 @@ import (
 )
 
 func simplifyLines(s string) string {
-	return strings.TrimSpace(
-		regexp.MustCompile(`[ ]*\n[ \n]*`).ReplaceAllString(s, "\n"),
-	)
+	return regexp.MustCompile(`[ ]*\n[ \n]*`).ReplaceAllString(s, "\n")
 }
 
 const doc1 = `
@@ -23,10 +21,8 @@ const doc1 = `
 	#title { Example }
 	#tags { example, tag-1, tag-2, other }
 	#a-dict-value {
-		#dict{
-			#a { 1 }
-			#b { 2 }
-		}
+		#a { 1 }
+		#b { 2 }
 	}
 }
 
@@ -36,7 +32,19 @@ A simple paragraph.
 
 #subtitle { Another example }
 
-Another Paragraph.
+Another paragraph #bold{ with } #italic{ some } #underline{ formatting } and
+a link to #link{ Wikipedia }{ https://en.wikipedia.org }.
+`
+
+var rendered1 string = `
+<h1>Short title</h1>
+
+A simple paragraph.
+
+<h2>Another example</h2>
+
+Another paragraph <b>with</b> <i>some</i> <u>formatting</u> and
+a link to <a href="https://en.wikipedia.org">Wikipedia</a>.
 `
 
 func Test1(t *testing.T) {
@@ -46,17 +54,23 @@ func Test1(t *testing.T) {
 	engine := &document.Engine{}
 
 	metadata, nodes, err := engine.Render(doc)
-	assert.Equal(t, document.Metadata{
-		"uuid":  "8bXY0njav9I3bisQfe8K7uzp7WJAjl",
-		"title": "Example",
-		"tags":  "example, tag-1, tag-2, other",
-		"a-dict-value": map[string]any{
-			"a": "1",
-			"b": "2",
-		},
-	}, metadata)
 	assert.Nil(t, err)
+	assert.Equal(t,
+		document.Metadata{
+			"uuid":  "8bXY0njav9I3bisQfe8K7uzp7WJAjl",
+			"title": "Example",
+			"tags":  "example, tag-1, tag-2, other",
+			"a-dict-value": map[string]any{
+				"a": "1",
+				"b": "2",
+			},
+		},
+		metadata,
+	)
 
 	htmlString := html.RenderToString(nodes)
-	assert.Equal(t, "<h1>Short title</h1>\nA simple paragraph.\n<h2>Another example</h2>\nAnother Paragraph.", simplifyLines(htmlString))
+	assert.Equal(t,
+		simplifyLines(rendered1),
+		simplifyLines(htmlString),
+	)
 }

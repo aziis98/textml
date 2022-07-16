@@ -26,12 +26,7 @@ func parseDictEntries(ast *parser.Block) (map[string]any, error) {
 
 func parseDictValue(ast *parser.Block) (any, error) {
 	if elem := ast.FirstElement(); elem != nil {
-		switch elem.Name {
-		case "dict":
-			return parseDictEntries(elem.Args[0])
-		default:
-			return nil, fmt.Errorf(`invalid dict value with identifier %q`, elem.Name)
-		}
+		return parseDictEntries(ast)
 	} else {
 		return ast.TextContent(), nil
 	}
@@ -50,16 +45,22 @@ func checkArgCount(el *parser.ElementNode, count int) error {
 	return nil
 }
 
-var headingMap = map[string]string{
+var directTranslationMap = map[string]string{
 	"title":          "h1",
 	"subtitle":       "h2",
 	"subsubtitle":    "h3",
 	"subsubsubtitle": "h4",
+
+	"bold":          "b",
+	"italic":        "i",
+	"underline":     "u",
+	"strikethrough": "s",
+	"code":          "code",
 }
 
 func (t *Engine) RenderElement(el *parser.ElementNode) ([]html.Node, error) {
-	// Headings
-	if tagName, found := headingMap[el.Name]; found {
+	// Direct translations
+	if tagName, found := directTranslationMap[el.Name]; found {
 		if err := checkArgCount(el, 1); err != nil {
 			return nil, err
 		}
@@ -77,8 +78,8 @@ func (t *Engine) RenderElement(el *parser.ElementNode) ([]html.Node, error) {
 	nodes := []html.Node{}
 
 	switch el.Name {
-	case "title":
-		if err := checkArgCount(el, 1); err != nil {
+	case "link":
+		if err := checkArgCount(el, 2); err != nil {
 			return nil, err
 		}
 
@@ -87,7 +88,17 @@ func (t *Engine) RenderElement(el *parser.ElementNode) ([]html.Node, error) {
 			return nil, err
 		}
 
-		nodes = append(nodes, html.NewElementNode("h1", nil, children))
+		linkTarget := el.Args[1].TextContent()
+
+		return []html.Node{
+			html.NewElementNode(
+				"a",
+				html.AttributeMap{
+					"href": &html.Attribute{Value: linkTarget},
+				},
+				children,
+			),
+		}, nil
 	}
 
 	return nodes, nil
