@@ -16,6 +16,16 @@ type Block struct {
 	Children []Node `json:"children"`
 }
 
+func (b *Block) FirstElement() *ElementNode {
+	for _, n := range b.Children {
+		if elem, ok := n.(*ElementNode); ok {
+			return elem
+		}
+	}
+
+	return nil
+}
+
 func (b *Block) TextContent() string {
 	s := ""
 

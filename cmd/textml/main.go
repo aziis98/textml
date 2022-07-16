@@ -141,7 +141,7 @@ func commandTranspile(inputFile *os.File, outputFile *os.File, format string) {
 	}
 
 	transpiler := transpile.Registry[format]
-	if err := transpiler.Transpile(outputFile, doc); err != nil {
+	if err := transpiler.Transpile(doc, outputFile); err != nil {
 		log.Fatal(err)
 	}
 }

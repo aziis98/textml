@@ -154,7 +154,7 @@ func (h *Html) TranspileBlock(w io.Writer, block *parser.Block) error {
 	return nil
 }
 
-func (h *Html) Transpile(w io.Writer, block *parser.Block) error {
+func (h *Html) Transpile(block *parser.Block, w io.Writer) error {
 	if _, err := fmt.Fprintf(w, "<!DOCTYPE html>\n<html>\n"); err != nil {
 		return err
 	}

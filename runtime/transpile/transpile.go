@@ -7,7 +7,7 @@ import (
 )
 
 type Transpiler interface {
-	Transpile(w io.Writer, block *parser.Block) error
+	Transpile(block *parser.Block, w io.Writer) error
 }
 
 var Registry = map[string]Transpiler{

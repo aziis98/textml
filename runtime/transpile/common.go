@@ -11,7 +11,7 @@ import (
 
 type Repr struct{}
 
-func (_ Repr) Transpile(w io.Writer, ast *parser.Block) error {
+func (_ Repr) Transpile(ast *parser.Block, w io.Writer) error {
 	repr.New(w).Println(ast)
 
 	return nil
@@ -19,7 +19,7 @@ func (_ Repr) Transpile(w io.Writer, ast *parser.Block) error {
 
 type Json struct{ Inline bool }
 
-func (t *Json) Transpile(w io.Writer, ast *parser.Block) error {
+func (t *Json) Transpile(ast *parser.Block, w io.Writer) error {
 	enc := json.NewEncoder(w)
 
 	if !t.Inline {
