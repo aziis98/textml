@@ -2,8 +2,8 @@ package document
 
 import (
 	"fmt"
-	"io"
 
+	"github.com/aziis98/textml/html"
 	"github.com/aziis98/textml/parser"
 )
 
@@ -40,8 +40,85 @@ func parseDictValue(ast *parser.Block) (any, error) {
 // Engine is a Markdown like format that transpiles TextML to HTML
 type Engine struct{}
 
-func (t *Engine) Render(ast *parser.Block, w io.Writer) (map[string]any, error) {
-	documentMetadata := map[string]any{}
+type Metadata map[string]any
+
+func checkArgCount(el *parser.ElementNode, count int) error {
+	if len(el.Args) != count {
+		return fmt.Errorf(`invalid argument count, expected %d but got %d`, count, len(el.Args))
+	}
+
+	return nil
+}
+
+var headingMap = map[string]string{
+	"title":          "h1",
+	"subtitle":       "h2",
+	"subsubtitle":    "h3",
+	"subsubsubtitle": "h4",
+}
+
+func (t *Engine) RenderElement(el *parser.ElementNode) ([]html.Node, error) {
+	// Headings
+	if tagName, found := headingMap[el.Name]; found {
+		if err := checkArgCount(el, 1); err != nil {
+			return nil, err
+		}
+
+		children, err := t.RenderBlock(el.Args[0])
+		if err != nil {
+			return nil, err
+		}
+
+		return []html.Node{
+			html.NewElementNode(tagName, nil, children),
+		}, nil
+	}
+
+	nodes := []html.Node{}
+
+	switch el.Name {
+	case "title":
+		if err := checkArgCount(el, 1); err != nil {
+			return nil, err
+		}
+
+		children, err := t.RenderBlock(el.Args[0])
+		if err != nil {
+			return nil, err
+		}
+
+		nodes = append(nodes, html.NewElementNode("h1", nil, children))
+	}
+
+	return nodes, nil
+}
+
+func (t *Engine) RenderBlock(ast *parser.Block) ([]html.Node, error) {
+	// TODO: Add automatic paragraph splitting after "\n\n", this requires distinguishing between inline and block elements...
+	nodes := []html.Node{}
+
+	for _, n := range ast.Children {
+		switch n := n.(type) {
+		case *parser.ElementNode:
+			children, err := t.RenderElement(n)
+			if err != nil {
+				return nil, err
+			}
+
+			nodes = append(nodes, children...)
+		case *parser.TextNode:
+			nodes = append(nodes, &html.Text{Value: n.Text})
+		default:
+			panic("illegal state")
+		}
+	}
+
+	return nodes, nil
+}
+
+func (t *Engine) Render(ast *parser.Block) (Metadata, []html.Node, error) {
+	documentMetadata := Metadata{}
+	nodes := []html.Node{}
 
 	for _, n := range ast.Children {
 		switch n := n.(type) {
@@ -50,23 +127,26 @@ func (t *Engine) Render(ast *parser.Block, w io.Writer) (map[string]any, error) 
 			case "metadata":
 				metadata, err := parseDictEntries(n.Args[0])
 				if err != nil {
-					return nil, err
+					return nil, nil, err
 				}
 
 				for k, v := range metadata {
 					documentMetadata[k] = v
 				}
 			default:
-				return nil, fmt.Errorf(`unexpected identifier %q`, n.Name)
+				children, err := t.RenderElement(n)
+				if err != nil {
+					return nil, nil, err
+				}
+
+				nodes = append(nodes, children...)
 			}
 		case *parser.TextNode:
-			if _, err := fmt.Fprintf(w, "%s", n.Text); err != nil {
-				return nil, err
-			}
+			nodes = append(nodes, &html.Text{Value: n.Text})
 		default:
 			panic("illegal state")
 		}
 	}
 
-	return documentMetadata, nil
+	return documentMetadata, nodes, nil
 }
