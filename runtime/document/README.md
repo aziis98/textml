@@ -17,23 +17,25 @@ Document is a Markdown like format that transpiles TextML to HTML.
     ```
     #define{
         #figure{
-            #src{ src }
-            #description{ description }
-            #placement{ placement }
+            #src
+            #description?
+            #placement?
         }
     }{
-        <div class="figure #{ placement ?: 'wide' }">
+        <div class="#css.class{ figure $placement }">
             <div class="picture">
                 <img src="#{ src }">
             </div>
-            <div class="description">
-                #{ description }
-            </div>
+            #if{ $description }{
+                <div class="description">
+                    #{ $description }
+                </div>
+            }
         </div>    
     }
     ```
     
-    Or for example for graphs...
+    Or for example for charts and graphs...
 
     ```
     #define{

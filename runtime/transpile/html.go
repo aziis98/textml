@@ -97,10 +97,10 @@ func (h *Html) TranspileElement(w io.Writer, element string, node *parser.Elemen
 	htmlAttributes := map[string]string{}
 
 	if len(args) == 2 {
-		var attrs *parser.Block
+		var attrs parser.Block
 		attrs, args = args[0], args[1:]
 
-		for _, n := range attrs.Children {
+		for _, n := range attrs {
 			if elm, ok := n.(*parser.ElementNode); ok {
 				key := elm.Name
 
@@ -130,8 +130,8 @@ func (h *Html) TranspileElement(w io.Writer, element string, node *parser.Elemen
 	return nil
 }
 
-func (h *Html) TranspileBlock(w io.Writer, block *parser.Block) error {
-	for _, node := range block.Children {
+func (h *Html) TranspileBlock(w io.Writer, b parser.Block) error {
+	for _, node := range b {
 		if elm, ok := node.(*parser.ElementNode); ok {
 			if htmlName, ok := htmlElements[elm.Name]; ok {
 				if err := h.TranspileElement(w, htmlName, elm); err != nil {
@@ -154,12 +154,12 @@ func (h *Html) TranspileBlock(w io.Writer, block *parser.Block) error {
 	return nil
 }
 
-func (h *Html) Transpile(block *parser.Block, w io.Writer) error {
+func (h *Html) Transpile(b parser.Block, w io.Writer) error {
 	if _, err := fmt.Fprintf(w, "<!DOCTYPE html>\n<html>\n"); err != nil {
 		return err
 	}
 
-	if err := h.TranspileBlock(w, block); err != nil {
+	if err := h.TranspileBlock(w, b); err != nil {
 		return err
 	}
 

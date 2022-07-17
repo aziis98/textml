@@ -2,6 +2,40 @@
 
 List of some random ideas for using this language (top are more recent)
 
+## Offload execution to other languages
+
+For example the _document_ runtime could have a directive like `#import-js-preprocessor{ SCRIPT }` that processes an unknown definition in the document.
+
+```js
+import { transformInput, isElementNode, getTextContent } from 'textml'
+
+/*
+    #figure{ 
+        #src{ IMAGE_PATH } 
+        #placement{ POSITION }
+        #description{ DESCRIPTION } 
+    }
+*/
+transformInput(element => {
+    const options = {}
+
+    if (element.name === "figure") {
+        element.args[0].filter(isElementNode).forEach(option => {
+            options[option.name] = getTextContent(option.args[0])
+        })
+    }
+
+    return `
+        <div class="${['figure', option.placement].filter(Boolean).join(' ')}">
+            <img src="${option.src}">
+            <div class="description">
+                ${option.description}
+            </div>
+        </div>   
+    `
+})
+```
+
 ## Templating language (alternative)
 
 One of the next thing I will start working on is a way to use this language as a templating language for building HTML pages.

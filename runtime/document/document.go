@@ -7,10 +7,10 @@ import (
 	"github.com/aziis98/textml/parser"
 )
 
-func parseDictEntries(ast *parser.Block) (map[string]any, error) {
+func parseDictEntries(ast parser.Block) (map[string]any, error) {
 	m := map[string]any{}
 
-	for _, n := range ast.Children {
+	for _, n := range ast {
 		if n, ok := n.(*parser.ElementNode); ok {
 			val, err := parseDictValue(n.Args[0])
 			if err != nil {
@@ -24,7 +24,7 @@ func parseDictEntries(ast *parser.Block) (map[string]any, error) {
 	return m, nil
 }
 
-func parseDictValue(ast *parser.Block) (any, error) {
+func parseDictValue(ast parser.Block) (any, error) {
 	if elem := ast.FirstElement(); elem != nil {
 		return parseDictEntries(ast)
 	} else {
@@ -55,7 +55,8 @@ var directTranslationMap = map[string]string{
 	"italic":        "i",
 	"underline":     "u",
 	"strikethrough": "s",
-	"code":          "code",
+
+	"code": "code",
 }
 
 func (t *Engine) RenderElement(el *parser.ElementNode) ([]html.Node, error) {
@@ -104,11 +105,11 @@ func (t *Engine) RenderElement(el *parser.ElementNode) ([]html.Node, error) {
 	return nodes, nil
 }
 
-func (t *Engine) RenderBlock(ast *parser.Block) ([]html.Node, error) {
+func (t *Engine) RenderBlock(ast parser.Block) ([]html.Node, error) {
 	// TODO: Add automatic paragraph splitting after "\n\n", this requires distinguishing between inline and block elements...
 	nodes := []html.Node{}
 
-	for _, n := range ast.Children {
+	for _, n := range ast {
 		switch n := n.(type) {
 		case *parser.ElementNode:
 			children, err := t.RenderElement(n)
@@ -127,11 +128,11 @@ func (t *Engine) RenderBlock(ast *parser.Block) ([]html.Node, error) {
 	return nodes, nil
 }
 
-func (t *Engine) Render(ast *parser.Block) (Metadata, []html.Node, error) {
+func (t *Engine) Render(ast parser.Block) (Metadata, []html.Node, error) {
 	documentMetadata := Metadata{}
 	nodes := []html.Node{}
 
-	for _, n := range ast.Children {
+	for _, n := range ast {
 		switch n := n.(type) {
 		case *parser.ElementNode:
 			switch n.Name {

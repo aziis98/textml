@@ -7,7 +7,7 @@ import (
 	"github.com/aziis98/textml/parser"
 )
 
-func ParseDocument(r io.RuneReader) (*parser.Block, error) {
+func ParseDocument(r io.RuneReader) (parser.Block, error) {
 	tokens, err := lexer.New(r).AllTokens()
 	if err != nil {
 		return nil, err

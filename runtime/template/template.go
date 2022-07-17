@@ -31,21 +31,21 @@ type Config struct {
 
 type Context struct {
 	Config   *Config
-	Registry map[string]*parser.Block
+	Registry map[string]parser.Block
 }
 
 func New(config *Config) *Context {
 	return &Context{
 		Config:   config,
-		Registry: map[string]*parser.Block{},
+		Registry: map[string]parser.Block{},
 	}
 }
 
-func (te *Context) Evaluate(block *parser.Block) (string, error) {
+func (te *Context) Evaluate(ast parser.Block) (string, error) {
 	r := &strings.Builder{}
 	var extendsDirective *string = nil
 
-	for _, n := range block.Children {
+	for _, n := range ast {
 		switch n := n.(type) {
 		case *parser.ElementNode:
 			switch n.Name {

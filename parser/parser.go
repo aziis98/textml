@@ -12,12 +12,10 @@ type Node interface {
 }
 
 // Block is a list of nodes
-type Block struct {
-	Children []Node `json:"children"`
-}
+type Block []Node
 
-func (b *Block) FirstElement() *ElementNode {
-	for _, n := range b.Children {
+func (b Block) FirstElement() *ElementNode {
+	for _, n := range b {
 		if elem, ok := n.(*ElementNode); ok {
 			return elem
 		}
@@ -26,10 +24,10 @@ func (b *Block) FirstElement() *ElementNode {
 	return nil
 }
 
-func (b *Block) TextContent() string {
+func (b Block) TextContent() string {
 	s := ""
 
-	for _, n := range b.Children {
+	for _, n := range b {
 		if n, ok := n.(*TextNode); ok {
 			s += n.Text
 		}
@@ -53,7 +51,7 @@ func (n *TextNode) MarshalJSON() ([]byte, error) {
 
 type ElementNode struct {
 	Name string
-	Args []*Block
+	Args []Block
 }
 
 func (_ *ElementNode) nodeType() {}
@@ -66,8 +64,8 @@ func (n *ElementNode) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func ParseDocument(ts []lexer.Token) (*Block, error) {
-	children := []Node{}
+func ParseDocument(ts []lexer.Token) (Block, error) {
+	children := Block{}
 
 	t := ts[0]
 	for len(ts) > 0 && t.Type != lexer.EOFToken {
@@ -94,7 +92,7 @@ func ParseDocument(ts []lexer.Token) (*Block, error) {
 		t = ts[0]
 	}
 
-	return &Block{children}, nil
+	return children, nil
 }
 
 func ParseElement(ts []lexer.Token) (Node, []lexer.Token, error) {
@@ -112,10 +110,10 @@ func ParseElement(ts []lexer.Token) (Node, []lexer.Token, error) {
 	ts = ts[1:]
 	t = ts[0]
 
-	blocks := []*Block{}
+	blocks := []Block{}
 
 	for len(ts) > 0 && t.Type == lexer.BraceOpenToken {
-		var blk *Block
+		var blk Block
 		var err error
 
 		blk, ts, err = ParseArgument(ts)
@@ -134,14 +132,14 @@ func ParseElement(ts []lexer.Token) (Node, []lexer.Token, error) {
 	}, ts, nil
 }
 
-func ParseArgument(ts []lexer.Token) (*Block, []lexer.Token, error) {
+func ParseArgument(ts []lexer.Token) (Block, []lexer.Token, error) {
 	if ts[0].Type != lexer.BraceOpenToken {
-		return nil, ts, fmt.Errorf("[argument] expected openning brace, got: %v", ts[0])
+		return nil, ts, fmt.Errorf("[argument] expected opening brace, got: %v", ts[0])
 	}
 
 	ts = ts[1:]
 
-	children := []Node{}
+	children := Block{}
 
 	for {
 		if len(ts) == 0 {
@@ -152,7 +150,7 @@ func ParseArgument(ts []lexer.Token) (*Block, []lexer.Token, error) {
 
 		if t.Type == lexer.BraceCloseToken {
 			ts = ts[1:]
-			return &Block{children}, ts, nil
+			return children, ts, nil
 		}
 
 		switch t.Type {
