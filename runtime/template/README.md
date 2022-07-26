@@ -57,7 +57,7 @@ _./article-1.tml_
 
 `textml template [-o OUTPUT] FILES...` will evaluate each file in sequence starting from an empty context, the default `LoaderFunc` is `FileLoader` so `#import{ FILE }` will read and evaluate that file. The option `--output` or `-o` can be used to change the file to write to, by default its the `-` meaning stdout.
 
-## Documentation
+## Reference
 
 - `#define{ NAME }{ TEMPLATE }` introduces a binding for `NAME` to `TEMPLATE`. Bindings can be used by calling them with `#{ NAME }`.
 
