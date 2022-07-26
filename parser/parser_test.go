@@ -93,9 +93,6 @@ func TestParser2(t *testing.T) {
 	document, err := parser.ParseDocument(tokens)
 	assert.Nil(t, err)
 
-	// f, _ := os.Create("example.txt")
-	// repr.New(f, repr.Indent("  ")).Println(document)
-
 	assert.Equal(t,
 		&parser.Block{
 			BeginToken: &lexer.Token{lexer.ElementToken, "#code", lexer.TokenInfo{0, 0}},
