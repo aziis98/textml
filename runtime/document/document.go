@@ -3,16 +3,16 @@ package document
 import (
 	"fmt"
 
+	"github.com/aziis98/textml/ast"
 	"github.com/aziis98/textml/html"
-	"github.com/aziis98/textml/parser"
 )
 
-func parseDictEntries(ast parser.Block) (map[string]any, error) {
+func parseDictEntries(block ast.Block) (map[string]any, error) {
 	m := map[string]any{}
 
-	for _, n := range ast {
-		if n, ok := n.(*parser.ElementNode); ok {
-			val, err := parseDictValue(n.Args[0])
+	for _, n := range block {
+		if n, ok := n.(*ast.ElementNode); ok {
+			val, err := parseDictValue(n.Arguments[0])
 			if err != nil {
 				return nil, err
 			}
@@ -24,11 +24,11 @@ func parseDictEntries(ast parser.Block) (map[string]any, error) {
 	return m, nil
 }
 
-func parseDictValue(ast parser.Block) (any, error) {
-	if elem := ast.FirstElement(); elem != nil {
-		return parseDictEntries(ast)
+func parseDictValue(block ast.Block) (any, error) {
+	if elem := block.FirstElement(); elem != nil {
+		return parseDictEntries(block)
 	} else {
-		return ast.TextContent(), nil
+		return block.TextContent(), nil
 	}
 }
 
@@ -37,9 +37,9 @@ type Engine struct{}
 
 type Metadata map[string]any
 
-func checkArgCount(el *parser.ElementNode, count int) error {
-	if len(el.Args) != count {
-		return fmt.Errorf(`invalid argument count, expected %d but got %d`, count, len(el.Args))
+func checkArgCount(elem *ast.ElementNode, count int) error {
+	if len(elem.Arguments) != count {
+		return fmt.Errorf(`invalid argument count, expected %d but got %d`, count, len(elem.Arguments))
 	}
 
 	return nil
@@ -59,14 +59,14 @@ var directTranslationMap = map[string]string{
 	"code": "code",
 }
 
-func (t *Engine) RenderElement(el *parser.ElementNode) ([]html.Node, error) {
+func (t *Engine) RenderElement(el *ast.ElementNode) ([]html.Node, error) {
 	// Direct translations
 	if tagName, found := directTranslationMap[el.Name]; found {
 		if err := checkArgCount(el, 1); err != nil {
 			return nil, err
 		}
 
-		children, err := t.RenderBlock(el.Args[0])
+		children, err := t.RenderBlock(el.Arguments[0])
 		if err != nil {
 			return nil, err
 		}
@@ -84,12 +84,12 @@ func (t *Engine) RenderElement(el *parser.ElementNode) ([]html.Node, error) {
 			return nil, err
 		}
 
-		children, err := t.RenderBlock(el.Args[0])
+		children, err := t.RenderBlock(el.Arguments[0])
 		if err != nil {
 			return nil, err
 		}
 
-		linkTarget := el.Args[1].TextContent()
+		linkTarget := el.Arguments[1].TextContent()
 
 		return []html.Node{
 			html.NewElementNode(
@@ -105,20 +105,20 @@ func (t *Engine) RenderElement(el *parser.ElementNode) ([]html.Node, error) {
 	return nodes, nil
 }
 
-func (t *Engine) RenderBlock(ast parser.Block) ([]html.Node, error) {
+func (t *Engine) RenderBlock(block ast.Block) ([]html.Node, error) {
 	// TODO: Add automatic paragraph splitting after "\n\n", this requires distinguishing between inline and block elements...
 	nodes := []html.Node{}
 
-	for _, n := range ast {
+	for _, n := range block {
 		switch n := n.(type) {
-		case *parser.ElementNode:
+		case *ast.ElementNode:
 			children, err := t.RenderElement(n)
 			if err != nil {
 				return nil, err
 			}
 
 			nodes = append(nodes, children...)
-		case *parser.TextNode:
+		case *ast.TextNode:
 			nodes = append(nodes, &html.Text{Value: n.Text})
 		default:
 			panic("illegal state")
@@ -128,16 +128,16 @@ func (t *Engine) RenderBlock(ast parser.Block) ([]html.Node, error) {
 	return nodes, nil
 }
 
-func (t *Engine) Render(ast parser.Block) (Metadata, []html.Node, error) {
+func (t *Engine) Render(block ast.Block) (Metadata, []html.Node, error) {
 	documentMetadata := Metadata{}
 	nodes := []html.Node{}
 
-	for _, n := range ast {
+	for _, n := range block {
 		switch n := n.(type) {
-		case *parser.ElementNode:
+		case *ast.ElementNode:
 			switch n.Name {
 			case "metadata":
-				metadata, err := parseDictEntries(n.Args[0])
+				metadata, err := parseDictEntries(n.Arguments[0])
 				if err != nil {
 					return nil, nil, err
 				}
@@ -153,7 +153,7 @@ func (t *Engine) Render(ast parser.Block) (Metadata, []html.Node, error) {
 
 				nodes = append(nodes, children...)
 			}
-		case *parser.TextNode:
+		case *ast.TextNode:
 			nodes = append(nodes, &html.Text{Value: n.Text})
 		default:
 			panic("illegal state")

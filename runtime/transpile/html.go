@@ -3,10 +3,9 @@ package transpile
 import (
 	"fmt"
 	"html"
-	"io"
 	"strings"
 
-	"github.com/aziis98/textml/parser"
+	"github.com/aziis98/textml/ast"
 )
 
 type Html struct {
@@ -42,25 +41,19 @@ var htmlElements = map[string]string{
 	"html.figure":  "figure",
 }
 
-func (h *Html) writeElement(w io.Writer, elem, s string) error {
-	f := "<%s>\n%s\n</%s>\n"
+func (h *Html) writeElement(elem, s string) string {
+	args := []any{elem, html.EscapeString(strings.TrimSpace(s)), elem}
+
 	if h.Inline {
-		f = "<%s>%s</%s>"
+		return fmt.Sprintf("<%s>%s</%s>", args...)
 	}
-
-	_, err := fmt.Fprintf(w, f, elem, html.EscapeString(strings.TrimSpace(s)), elem)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return fmt.Sprintf("<%s>\n%s\n</%s>\n", args...)
 }
 
-func (h *Html) writeElementOpening(w io.Writer, elem string, attrs map[string]string) error {
+func (h *Html) writeElementOpening(elem string, attrs map[string]string) string {
 	f := "<%s%s>\n"
 	if h.Inline {
-		f = "<%s%s>\n"
+		f = "<%s%s>"
 	}
 
 	attrString := ""
@@ -68,45 +61,42 @@ func (h *Html) writeElementOpening(w io.Writer, elem string, attrs map[string]st
 		attrString += fmt.Sprintf(` %s="%s"`, k, v)
 	}
 
-	if _, err := fmt.Fprintf(w, f, elem, attrString); err != nil {
-		return err
-	}
-
-	return nil
+	return fmt.Sprintf(f, elem, attrString)
 }
 
-func (h *Html) writeElementClosing(w io.Writer, elem string) error {
+func (h *Html) writeElementClosing(elem string) string {
 	f := "</%s>\n"
 	if h.Inline {
 		f = "</%s>"
 	}
 
-	if _, err := fmt.Fprintf(w, f, elem); err != nil {
-		return err
-	}
-
-	return nil
+	return fmt.Sprintf(f, elem)
 }
 
-func (h *Html) TranspileElement(w io.Writer, element string, node *parser.ElementNode) error {
-	args := node.Args
+func (h *Html) TranspileElement(node *ast.ElementNode) (string, error) {
+	element, ok := htmlElements[node.Name]
+	if !ok {
+		return "", fmt.Errorf("invalid html element with name %q", node.Name)
+	}
+
+	args := node.Arguments
 	if len(args) > 2 {
-		return fmt.Errorf(`invalid number of arguments for element "%q"`, element)
+		return "", fmt.Errorf(`invalid number of arguments for element "%q"`, element)
 	}
 
 	htmlAttributes := map[string]string{}
 
 	if len(args) == 2 {
-		var attrs parser.Block
+		var attrs ast.Block
 		attrs, args = args[0], args[1:]
 
 		for _, n := range attrs {
-			if elm, ok := n.(*parser.ElementNode); ok {
+			if elm, ok := n.(*ast.ElementNode); ok {
 				key := elm.Name
 
 				value := ""
-				if len(elm.Args) > 0 {
-					value = elm.Args[0].TextContent()
+				if len(elm.Arguments) > 0 {
+					value = elm.Arguments[0].TextContent()
 				}
 
 				htmlAttributes[key] = value
@@ -114,58 +104,66 @@ func (h *Html) TranspileElement(w io.Writer, element string, node *parser.Elemen
 		}
 	}
 
-	if err := h.writeElementOpening(w, element, htmlAttributes); err != nil {
-		return err
+	htmlBlock, err := h.TranspileBlock(args[0])
+	if err != nil {
+		return "", err
 	}
 
-	insideBlock := args[0]
-	if err := h.TranspileBlock(w, insideBlock); err != nil {
-		return err
-	}
+	sb := &strings.Builder{}
 
-	if err := h.writeElementClosing(w, element); err != nil {
-		return err
+	fmt.Fprintf(sb, h.writeElementOpening(element, htmlAttributes))
+	fmt.Fprintf(sb, htmlBlock)
+	if !h.Inline {
+		fmt.Fprintln(sb)
 	}
+	fmt.Fprintf(sb, h.writeElementClosing(element))
 
-	return nil
+	return sb.String(), nil
 }
 
-func (h *Html) TranspileBlock(w io.Writer, b parser.Block) error {
+func (h *Html) TranspileBlock(b ast.Block) (string, error) {
+	sb := &strings.Builder{}
+
 	for _, node := range b {
-		if elm, ok := node.(*parser.ElementNode); ok {
-			if htmlName, ok := htmlElements[elm.Name]; ok {
-				if err := h.TranspileElement(w, htmlName, elm); err != nil {
-					return err
-				}
-			} else {
-				return fmt.Errorf("invalid html element with name %q", elm.Name)
+		switch node := node.(type) {
+		case *ast.ElementNode:
+			htmlElem, err := h.TranspileElement(node)
+			if err != nil {
+				return "", err
 			}
-		}
-		if n, ok := node.(*parser.TextNode); ok {
-			if len(strings.TrimSpace(n.Text)) > 0 {
-				if _, err := fmt.Fprintf(w, "%s\n",
-					html.EscapeString(strings.TrimSpace(n.Text))); err != nil {
-					return err
-				}
+
+			fmt.Fprintln(sb, htmlElem)
+
+		case *ast.TextNode:
+			if len(strings.TrimSpace(node.Text)) > 0 {
+				fmt.Fprintln(sb, html.EscapeString(strings.TrimSpace(node.Text)))
 			}
+
+		default:
+			panic("invalid node type")
 		}
 	}
 
-	return nil
+	if !h.Inline {
+		fmt.Fprintln(sb)
+	}
+
+	return sb.String(), nil
 }
 
-func (h *Html) Transpile(b parser.Block, w io.Writer) error {
-	if _, err := fmt.Fprintf(w, "<!DOCTYPE html>\n<html>\n"); err != nil {
-		return err
+func (h *Html) Transpile(b ast.Block) (string, error) {
+
+	htmlBlock, err := h.TranspileBlock(b)
+	if err != nil {
+		return "", err
 	}
 
-	if err := h.TranspileBlock(w, b); err != nil {
-		return err
-	}
+	sb := &strings.Builder{}
 
-	if _, err := fmt.Fprintf(w, "</html>\n"); err != nil {
-		return err
-	}
+	fmt.Fprintln(sb, "<!DOCTYPE html>")
+	fmt.Fprintln(sb, "<html>")
+	fmt.Fprintln(sb, htmlBlock)
+	fmt.Fprintln(sb, "</html>")
 
-	return nil
+	return sb.String(), nil
 }

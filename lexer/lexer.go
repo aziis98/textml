@@ -12,22 +12,54 @@ import (
 type tokenType int
 
 const (
-	TextToken tokenType = iota
+	EOFToken tokenType = iota
+	TextToken
 	ElementToken
 	BraceOpenToken
 	BraceCloseToken
-	EOFToken
 )
 
-const eofRune rune = 0
+func (t tokenType) GoString() string {
+	switch t {
+	case EOFToken:
+		return "lexer.EOFToken"
+	case TextToken:
+		return "lexer.TextToken"
+	case ElementToken:
+		return "lexer.ElementToken"
+	case BraceOpenToken:
+		return "lexer.BraceOpenToken"
+	case BraceCloseToken:
+		return "lexer.BraceCloseToken"
+	default:
+		panic(fmt.Errorf("illegal token type: %d", t))
+	}
+}
+
+const eof rune = 0
+
+type TokenInfo struct {
+	Line, Column int
+}
+
+func (ti TokenInfo) GoString() string {
+	return fmt.Sprintf("TokenInfo{%d, %d}", ti.Line, ti.Column)
+}
 
 type Token struct {
 	Type  tokenType
 	Value string
+
+	TokenInfo TokenInfo
 }
 
 func (t Token) String() string {
-	return fmt.Sprintf("Token{%v, %q}", t.Type, t.Value)
+	return fmt.Sprintf("Token{%v, %q, %d:%d}",
+		t.Type,
+		t.Value,
+		t.TokenInfo.Line,
+		t.TokenInfo.Column,
+	)
 }
 
 type lexer struct {
@@ -39,10 +71,14 @@ type lexer struct {
 
 	pos int
 
-	tokens chan Token
-	err    chan error
+	over   bool
+	done   chan struct{}
+	tokens []*Token
+	err    error
 
 	bracesStack *utils.Stack[int]
+
+	tokenInfo TokenInfo
 }
 
 func New(rr io.RuneReader) *lexer {
@@ -55,10 +91,14 @@ func New(rr io.RuneReader) *lexer {
 
 		pos: 0,
 
-		tokens: make(chan Token, 1),
-		err:    make(chan error, 1),
+		over:   false,
+		done:   make(chan struct{}),
+		tokens: []*Token{},
+		err:    nil,
 
 		bracesStack: utils.NewStack(1),
+
+		tokenInfo: TokenInfo{0, 0},
 	}
 
 	go l.scan()
@@ -66,38 +106,25 @@ func New(rr io.RuneReader) *lexer {
 	return l
 }
 
-func (l *lexer) NextToken() (Token, error) {
-	select {
-	case t := <-l.tokens:
-		return t, nil
-	case err := <-l.err:
-		return Token{}, err
-	}
-}
-
-func (l *lexer) AllTokens() ([]Token, error) {
-	tokens := []Token{}
-	errors := []error{}
-
-	for t := range l.tokens {
-		tokens = append(tokens, t)
+func (l *lexer) AllTokens() ([]*Token, error) {
+	if !l.over {
+		<-l.done
+		l.over = true
+		close(l.done)
 	}
 
-	for err := range l.err {
-		errors = append(errors, err)
+	if l.err != nil {
+		return nil, l.err
 	}
 
-	if len(errors) > 0 {
-		return nil, fmt.Errorf("errors: %v", errors)
-	}
-
-	return tokens, nil
+	return l.tokens, nil
 }
 
 func (l *lexer) scan() {
 	lexText(l)
-	close(l.tokens)
-	close(l.err)
+	if l.err == nil {
+		l.done <- struct{}{}
+	}
 }
 
 // : from, to    :                  [-----]
@@ -131,10 +158,10 @@ func (l *lexer) next() rune {
 	r, _, err := l.ReadRune()
 	if err != nil {
 		if err != io.EOF {
-			l.err <- err
+			l.errorf("%v", err)
 		}
 
-		return eofRune
+		return eof
 	}
 
 	l.pos++
@@ -160,14 +187,10 @@ func (l *lexer) move(pos int) {
 	l.pos = pos
 }
 
-func (l *lexer) backupAmount(amt int) {
-	l.pos -= amt
-}
-
 func (l *lexer) peek() rune {
 	r := l.next()
 
-	if r != eofRune {
+	if r != eof {
 		l.backup()
 	}
 
@@ -180,16 +203,35 @@ func (l *lexer) emit(tt tokenType) {
 	l.bufFrom = l.pos
 
 	if len(value) > 0 || tt == EOFToken {
-		t := Token{tt, value}
-		l.tokens <- t
+		t := &Token{tt, value, l.tokenInfo}
+		l.tokens = append(l.tokens, t)
+
+		for _, r := range value {
+			if r == '\n' {
+				l.tokenInfo.Line++
+				l.tokenInfo.Column = 0
+			} else {
+				l.tokenInfo.Column++
+			}
+		}
 	}
 }
 
 func (l *lexer) errorf(format string, args ...any) {
-	l.err <- fmt.Errorf(format, args...)
+	l.err = fmt.Errorf(format, args...)
+	l.done <- struct{}{}
 }
 
 func (l *lexer) ignore() {
+	for _, r := range string(l.bufferSlice(l.bufFrom, l.pos)) {
+		if r == '\n' {
+			l.tokenInfo.Line++
+			l.tokenInfo.Column = 0
+		} else {
+			l.tokenInfo.Column++
+		}
+	}
+
 	l.buf = l.bufferSlice(l.pos, l.bufTo)
 	l.bufFrom = l.pos
 }
@@ -203,17 +245,6 @@ func (l *lexer) acceptAny(valid string) bool {
 
 	l.backup()
 	return false
-}
-
-func (l *lexer) acceptSeq(valid string) bool {
-	for _, validRune := range valid {
-		r := l.next()
-		if validRune != r {
-			return false
-		}
-	}
-
-	return true
 }
 
 func (l *lexer) acceptAnyRepeated(valid string) int {
@@ -253,7 +284,7 @@ func lexText(l *lexer) {
 		r := l.peek()
 
 		switch r {
-		case eofRune:
+		case eof:
 			l.emit(TextToken)
 			l.emit(EOFToken)
 			return
@@ -288,7 +319,7 @@ func lexText(l *lexer) {
 				l.move(bracesEnd) // emit new open brace token
 				l.emit(BraceOpenToken)
 
-				if l.acceptAny(" ") { // skip a single whitespace if present after openning brace
+				if l.acceptAny(" ") { // skip a single whitespace if present after opening brace
 					l.ignore()
 				}
 

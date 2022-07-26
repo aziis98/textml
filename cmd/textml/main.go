@@ -59,7 +59,7 @@ func main() {
 			}
 		}
 
-		if showHelp || cmd.NArg() == 0 {
+		if showHelp || (!listFormats && cmd.NArg() == 0) {
 			cmd.Usage()
 			os.Exit(0)
 		}
@@ -141,9 +141,24 @@ func commandTranspile(inputFile *os.File, outputFile *os.File, format string) {
 	}
 
 	transpiler := transpile.Registry[format]
-	if err := transpiler.Transpile(doc, outputFile); err != nil {
-		log.Fatal(err)
+
+	switch t := transpiler.(type) {
+	case transpile.StringTranspiler:
+		s, err := t.Transpile(doc)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Fprint(outputFile, s)
+
+	case transpile.WriteTranspiler:
+		if err := t.Transpile(outputFile, doc); err != nil {
+			log.Fatal(err)
+		}
+
+	default:
+		panic(fmt.Errorf("invalid transpiler type: %T", transpiler))
 	}
+
 }
 
 func commandTemplate(inputFile *os.File, outputFile *os.File) {

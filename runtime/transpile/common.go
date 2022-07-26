@@ -6,30 +6,26 @@ import (
 	"log"
 
 	"github.com/alecthomas/repr"
-	"github.com/aziis98/textml/parser"
+	"github.com/aziis98/textml/ast"
 )
 
 type Repr struct{}
 
-func (_ Repr) Transpile(ast parser.Block, w io.Writer) error {
-	repr.New(w).Println(ast)
-
+func (Repr) Transpile(w io.Writer, block ast.Block) error {
+	repr.New(w).Println(block)
 	return nil
 }
 
 type Json struct{ Inline bool }
 
-func (t *Json) Transpile(ast parser.Block, w io.Writer) error {
+func (t *Json) Transpile(w io.Writer, block ast.Block) error {
 	enc := json.NewEncoder(w)
 
 	if !t.Inline {
 		enc.SetIndent("", "    ")
 	}
 
-	if err := enc.Encode(ast); err != nil {
-		log.Fatal(err)
-	}
-	if _, err := w.Write([]byte("\n")); err != nil {
+	if err := enc.Encode(block); err != nil {
 		log.Fatal(err)
 	}
 

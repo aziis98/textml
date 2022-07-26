@@ -3,14 +3,18 @@ package transpile
 import (
 	"io"
 
-	"github.com/aziis98/textml/parser"
+	"github.com/aziis98/textml/ast"
 )
 
-type Transpiler interface {
-	Transpile(block parser.Block, w io.Writer) error
+type StringTranspiler interface {
+	Transpile(block ast.Block) (string, error)
 }
 
-var Registry = map[string]Transpiler{
+type WriteTranspiler interface {
+	Transpile(w io.Writer, block ast.Block) error
+}
+
+var Registry = map[string]any{
 	// Go Repr
 	"repr": &Repr{},
 	// HTML

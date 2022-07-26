@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/aziis98/textml"
-	"github.com/aziis98/textml/parser"
+	"github.com/aziis98/textml/ast"
 )
 
 func FileLoader(ctx *Context, filename string) error {
@@ -17,6 +17,9 @@ func FileLoader(ctx *Context, filename string) error {
 	}
 
 	doc, err := textml.ParseDocument(bufio.NewReader(f))
+	if err != nil {
+		return err
+	}
 
 	if _, err := ctx.Evaluate(doc); err != nil {
 		return err
@@ -31,61 +34,61 @@ type Config struct {
 
 type Context struct {
 	Config   *Config
-	Registry map[string]parser.Block
+	Registry map[string]ast.Block
 }
 
 func New(config *Config) *Context {
 	return &Context{
 		Config:   config,
-		Registry: map[string]parser.Block{},
+		Registry: map[string]ast.Block{},
 	}
 }
 
-func (te *Context) Evaluate(ast parser.Block) (string, error) {
+func (te *Context) Evaluate(block ast.Block) (string, error) {
 	r := &strings.Builder{}
 	var extendsDirective *string = nil
 
-	for _, n := range ast {
+	for _, n := range block {
 		switch n := n.(type) {
-		case *parser.ElementNode:
+		case *ast.ElementNode:
 			switch n.Name {
 
 			case "import":
-				if len(n.Args) != 1 {
-					return "", fmt.Errorf(`#import expected 1 argument, got %d`, len(n.Args))
+				if len(n.Arguments) != 1 {
+					return "", fmt.Errorf(`#import expected 1 argument, got %d`, len(n.Arguments))
 				}
 
 				if te.Config.LoaderFunc == nil {
 					return "", fmt.Errorf(`template engine has no module loader`)
 				}
 
-				moduleName := n.Args[0].TextContent()
+				moduleName := n.Arguments[0].TextContent()
 
 				if err := te.Config.LoaderFunc(te, moduleName); err != nil {
 					return "", err
 				}
 
 			case "extends":
-				if len(n.Args) != 1 {
-					return "", fmt.Errorf(`#import expected 1 argument, got %d`, len(n.Args))
+				if len(n.Arguments) != 1 {
+					return "", fmt.Errorf(`#import expected 1 argument, got %d`, len(n.Arguments))
 				}
 
 				extendsDirective = new(string)
-				*extendsDirective = n.Args[0].TextContent()
+				*extendsDirective = n.Arguments[0].TextContent()
 			case "define":
-				if len(n.Args) != 2 {
-					return "", fmt.Errorf(`#define expected 2 arguments, got %d`, len(n.Args))
+				if len(n.Arguments) != 2 {
+					return "", fmt.Errorf(`#define expected 2 arguments, got %d`, len(n.Arguments))
 				}
 
-				key := n.Args[0].TextContent()
-				te.Registry[key] = n.Args[1]
+				key := n.Arguments[0].TextContent()
+				te.Registry[key] = n.Arguments[1]
 
 			case "":
-				if len(n.Args) != 1 {
-					return "", fmt.Errorf(`anonymous block expected 1 argument, got %d`, len(n.Args))
+				if len(n.Arguments) != 1 {
+					return "", fmt.Errorf(`anonymous block expected 1 argument, got %d`, len(n.Arguments))
 				}
 
-				key := n.Args[0].TextContent()
+				key := n.Arguments[0].TextContent()
 				value := te.Registry[key]
 
 				s, err := te.Evaluate(value)
@@ -97,7 +100,7 @@ func (te *Context) Evaluate(ast parser.Block) (string, error) {
 			default:
 				return "", fmt.Errorf(`unexpected element "#%s"`, n.Name)
 			}
-		case *parser.TextNode:
+		case *ast.TextNode:
 			r.WriteString(n.Text)
 		}
 	}
