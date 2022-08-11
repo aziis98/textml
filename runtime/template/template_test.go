@@ -112,7 +112,7 @@ func TestExpressionIf2(t *testing.T) {
 	eng.Variables["x"] = "Nope"
 
 	a, err := renderTemplate(eng, `
-		Hidden: #if{ c }{ #{ x } }
+		Hidden: #if{ c }{ x }
 	`)
 	assert.Nil(t, err)
 	assert.Equal(t, "Hidden:", a)
@@ -125,7 +125,7 @@ func TestExpressionIf3(t *testing.T) {
 	eng.Variables["y"] = 234
 
 	a, err := renderTemplate(eng, `
-		#if{ c }{ #{ x } }{ #{ y } }
+		#if{ c }{ x }{ y }
 	`)
 	assert.Nil(t, err)
 	assert.Equal(t, "234", a)
@@ -164,6 +164,25 @@ func TestExpressionForEachChar(t *testing.T) {
 	`), a)
 }
 
+func TestForEachWithInline(t *testing.T) {
+	eng := template.New()
+	eng.Variables["names"] = []string{"Adam", "Billy", "John", "Rose"}
+
+	a, err := renderTemplate(eng, `
+		#foreach{ name }{ names }{ #inline {
+			#char{ newline }   
+			Hi, #{ name }!
+		} }
+	`)
+	assert.Nil(t, err)
+	assert.Equal(t, simplify(`
+		Hi, Adam!
+		Hi, Billy!
+		Hi, John!
+		Hi, Rose!
+	`), a)
+}
+
 func TestExpressionIntersperse(t *testing.T) {
 	eng := template.New()
 	eng.Variables["things"] = []string{"aaa", "bbb", "ccc", "ddd"}
@@ -173,4 +192,14 @@ func TestExpressionIntersperse(t *testing.T) {
 	`)
 	assert.Nil(t, err)
 	assert.Equal(t, `aaa, bbb, ccc, ddd`, a)
+}
+
+func TestValues(t *testing.T) {
+	eng := template.New()
+
+	a, err := renderTemplate(eng, `
+		#unless{ false }{ Yep }
+	`)
+	assert.Nil(t, err)
+	assert.Equal(t, `Yep`, a)
 }

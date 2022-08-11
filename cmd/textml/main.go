@@ -21,15 +21,15 @@ func init() {
 
 const usage = `usage: textml COMMAND ...
 
-Commands:
-	transpile   Used to read .tml files and convert them to other formats
-	template    Use textml as a templating language
+Available commands:
+    transpile   Used to read .tml files and convert them to other formats
+    template    Use textml as a templating language
 `
 
 func main() {
-	if len(os.Args) < 2 {
+	if len(os.Args) < 2 || os.Args[1] == "-h" || os.Args[1] == "--help" {
 		os.Stderr.WriteString(usage)
-		os.Exit(2)
+		os.Exit(0)
 	}
 
 	switch os.Args[1] {

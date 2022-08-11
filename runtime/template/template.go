@@ -5,7 +5,11 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"regexp"
+	"strconv"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/aziis98/textml"
 	"github.com/aziis98/textml/ast"
@@ -56,40 +60,83 @@ func New(defaultConfig ...Config) *Engine {
 	}
 }
 
-// func (e *Engine) evaluateValue(block ast.Block) (any, error) {
-// 	text := block.TextContent()
-// 	trimmed := strings.TrimSpace(text)
+func (e *Engine) evaluateValue(block ast.Block) (any, error) {
+	if len(block) != 1 {
+		return nil, fmt.Errorf("invalid value node")
+	}
 
-// 	r, _ := utf8.DecodeRuneInString(trimmed)
-// 	if unicode.IsDigit(r) {
-// 		floatValue, err := strconv.ParseFloat(trimmed, 64)
-// 		if err == nil {
-// 			return floatValue, nil
-// 		}
+	node, ok := block[0].(*ast.TextNode)
+	if !ok {
+		return nil, fmt.Errorf("invalid value node")
+	}
 
-// 		intValue, err := strconv.ParseInt(trimmed, 10, 64)
-// 		if err == nil {
-// 			return intValue, nil
-// 		}
-// 	}
+	text := strings.TrimSpace(node.Text)
 
-// 	if trimmed == "true" {
-// 		return true, nil
-// 	}
-// 	if trimmed == "false" {
-// 		return false, nil
-// 	}
+	// if first rune is a digit then try parse to float64 or int64
+	r, _ := utf8.DecodeRuneInString(text)
+	if unicode.IsDigit(r) {
+		floatValue, err := strconv.ParseFloat(text, 64)
+		if err == nil {
+			return float64(floatValue), nil
+		}
 
-// 	return nil, fmt.Errorf("invalid value %q", trimmed)
-// }
+		intValue, err := strconv.ParseInt(text, 10, 64)
+		if err == nil {
+			return int(intValue), nil
+		}
+	}
+
+	// otherwise check if boolean
+	if text == "true" {
+		return true, nil
+	}
+	if text == "false" {
+		return false, nil
+	}
+
+	// otherwise return variable
+	value, ok := e.Variables[text]
+	if !ok {
+		return nil, fmt.Errorf("unknown variable %q", text)
+	}
+
+	return value, nil
+}
 
 func errInvalidElement(elem *ast.ElementNode) error {
 	return fmt.Errorf("invalid template command %q with %d arguments", elem.Name, len(elem.Arguments))
 }
 
 var commandCharMap = map[string]string{
+	"space":   " ",
 	"tab":     "\t",
 	"newline": "\n",
+}
+
+var regexLineWithIndent = regexp.MustCompile(` *\n\s*`)
+
+func inlineBlock(block ast.Block) ast.Block {
+	result := ast.Block{}
+	for _, node := range block {
+		switch node := node.(type) {
+		case *ast.ElementNode:
+			arguments := []ast.Block{}
+
+			for _, arg := range node.Arguments {
+				arguments = append(arguments, inlineBlock(arg))
+			}
+
+			result = append(result, &ast.ElementNode{
+				Name:      node.Name,
+				Arguments: arguments,
+			})
+		case *ast.TextNode:
+			result = append(result, &ast.TextNode{
+				Text: regexLineWithIndent.ReplaceAllString(node.Text, ""),
+			})
+		}
+	}
+	return result
 }
 
 func (e *Engine) evaluateElement(elem *ast.ElementNode) (any, error) {
@@ -155,10 +202,12 @@ func (e *Engine) evaluateElement(elem *ast.ElementNode) (any, error) {
 
 		return result, nil
 
-	case "if":
+	case "if", "unless":
 		if len(elem.Arguments) < 2 && len(elem.Arguments) > 3 {
 			return nil, errInvalidElement(elem)
 		}
+
+		invertCond := elem.Name == "unless"
 
 		cond := elem.Arguments[0]
 		ifTrue := elem.Arguments[1]
@@ -168,7 +217,16 @@ func (e *Engine) evaluateElement(elem *ast.ElementNode) (any, error) {
 			return nil, err
 		}
 
-		if c, ok := condValue.(bool); ok && c {
+		c, ok := condValue.(bool)
+		if !ok {
+			return nil, fmt.Errorf("invalid #if condition type %T", condValue)
+		}
+
+		if invertCond {
+			c = !c
+		}
+
+		if c {
 			return e.evaluateBlock(ifTrue)
 		} else if len(elem.Arguments) == 3 {
 			return e.evaluateBlock(elem.Arguments[2])
@@ -254,18 +312,21 @@ func (e *Engine) evaluateElement(elem *ast.ElementNode) (any, error) {
 
 		return str, nil
 
+	case "inline":
+		if len(elem.Arguments) != 1 {
+			return nil, errInvalidElement(elem)
+		}
+
+		inlinedAst := inlineBlock(elem.Arguments[0])
+
+		return e.evaluateBlock(inlinedAst)
+
 	case "":
 		if len(elem.Arguments) != 1 {
 			return nil, errInvalidElement(elem)
 		}
 
-		varName := strings.TrimSpace(elem.Arguments[0].TextContent())
-		variableValue, ok := e.Variables[varName]
-		if !ok {
-			return nil, fmt.Errorf("no variable %q", varName)
-		}
-
-		return variableValue, nil
+		return e.evaluateBlock(elem.Arguments[0])
 
 	default:
 		return nil, fmt.Errorf("invalid template command %q", elem.Name)
@@ -273,6 +334,13 @@ func (e *Engine) evaluateElement(elem *ast.ElementNode) (any, error) {
 }
 
 func (e *Engine) evaluateBlock(block ast.Block) (any, error) {
+
+	// first try evaluate value literals and variables
+	value, err := e.evaluateValue(block)
+	if err == nil {
+		return value, nil
+	}
+
 	sb := &strings.Builder{}
 	var resultValue any = nil
 
