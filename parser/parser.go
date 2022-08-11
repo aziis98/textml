@@ -10,34 +10,31 @@ type Node interface {
 	sealNode()
 }
 
-// Block is a list of nodes
+func (TextNode) sealNode()    {}
+func (ElementNode) sealNode() {}
+
+// Block represents a sequence of parsed node in a document, holds references to the first and last parsed tokens.
 type Block struct {
 	BeginToken, EndToken *lexer.Token
 
 	Children []Node
 }
 
-// TextNode
-
+// TextNode represents a text node with token information.
 type TextNode struct {
 	*lexer.Token
 	Text string
 }
 
-func (TextNode) sealNode() {}
-
-// ElementNode
-
+// ElementNode represents an element node with name, arguments and token information.
 type ElementNode struct {
 	*lexer.Token
 	Name string
 	Args []*Block
 }
 
-func (ElementNode) sealNode() {}
-
-// ParseDocument creates a parse AST, this keeps token information if one wants to do low level processing after the parse.
-func ParseDocument(ts []*lexer.Token) (*Block, error) {
+// Parse creates a parse AST, this keeps token information if one wants to do low level processing after the parse.
+func Parse(ts []*lexer.Token) (*Block, error) {
 	children := []Node{}
 	begin := ts[0]
 	t := ts[0]
@@ -50,7 +47,7 @@ func ParseDocument(ts []*lexer.Token) (*Block, error) {
 			var elt Node
 			var err error
 
-			elt, ts, err = ParseElement(ts)
+			elt, ts, err = parseElement(ts)
 			if err != nil {
 				fmt.Printf("rest: %v\n", ts)
 				return nil, err
@@ -68,7 +65,8 @@ func ParseDocument(ts []*lexer.Token) (*Block, error) {
 	return &Block{begin, t, children}, nil
 }
 
-func ParseElement(ts []*lexer.Token) (Node, []*lexer.Token, error) {
+// parseElement expects an element and parses it into a [*parser.ElementNode].
+func parseElement(ts []*lexer.Token) (*ElementNode, []*lexer.Token, error) {
 	if len(ts) == 0 {
 		return nil, ts, fmt.Errorf("[element] not enough tokens")
 	}
@@ -90,7 +88,7 @@ func ParseElement(ts []*lexer.Token) (Node, []*lexer.Token, error) {
 		var blk *Block
 		var err error
 
-		blk, ts, err = ParseArgument(ts)
+		blk, ts, err = parseElementArgument(ts)
 		if err != nil {
 			return nil, ts, err
 		}
@@ -108,7 +106,7 @@ func ParseElement(ts []*lexer.Token) (Node, []*lexer.Token, error) {
 	}, ts, nil
 }
 
-func ParseArgument(ts []*lexer.Token) (*Block, []*lexer.Token, error) {
+func parseElementArgument(ts []*lexer.Token) (*Block, []*lexer.Token, error) {
 	if ts[0].Type != lexer.BraceOpenToken {
 		return nil, ts, fmt.Errorf("[argument] expected opening brace, got: %v", ts[0])
 	}
@@ -138,7 +136,7 @@ func ParseArgument(ts []*lexer.Token) (*Block, []*lexer.Token, error) {
 			end = t
 
 		case lexer.ElementToken:
-			elt, tss, err := ParseElement(ts)
+			elt, tss, err := parseElement(ts)
 			if err != nil {
 				return nil, ts, err
 			}

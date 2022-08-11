@@ -15,7 +15,7 @@ func TestParser1(t *testing.T) {
 	tokens, err := lexer.New(s).AllTokens()
 	assert.Nil(t, err)
 
-	document, err := parser.ParseDocument(tokens)
+	document, err := parser.Parse(tokens)
 	assert.Nil(t, err)
 
 	assert.Equal(t,
@@ -90,7 +90,7 @@ func TestParser2(t *testing.T) {
 	tokens, err := lexer.New(s).AllTokens()
 	assert.Nil(t, err)
 
-	document, err := parser.ParseDocument(tokens)
+	document, err := parser.Parse(tokens)
 	assert.Nil(t, err)
 
 	assert.Equal(t,

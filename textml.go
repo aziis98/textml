@@ -8,13 +8,14 @@ import (
 	"github.com/aziis98/textml/parser"
 )
 
+// ParseDocument tokenizes the input using [lexer] and then parses it with [parser.ParseDocument]
 func ParseDocument(r io.RuneReader) (ast.Block, error) {
 	tokens, err := lexer.New(r).AllTokens()
 	if err != nil {
 		return nil, err
 	}
 
-	doc, err := parser.ParseDocument(tokens)
+	doc, err := parser.Parse(tokens)
 	if err != nil {
 		return nil, err
 	}

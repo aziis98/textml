@@ -4,13 +4,14 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/aziis98/textml"
 	"github.com/aziis98/textml/ast"
 )
 
-func FileLoader(ctx *Context, filename string) error {
+func FileLoader(ctx *Engine, filename string) error {
 	f, err := os.Open(filename)
 	if err != nil {
 		return err
@@ -29,22 +30,91 @@ func FileLoader(ctx *Context, filename string) error {
 }
 
 type Config struct {
-	LoaderFunc func(*Context, string) error
+	LoaderFunc func(*Engine, string) error
 }
 
-type Context struct {
-	Config   *Config
-	Registry map[string]ast.Block
+type Engine struct {
+	Config   Config
+	Registry map[string]any
 }
 
-func New(config *Config) *Context {
-	return &Context{
+func New(defaultConfig ...Config) *Engine {
+	config := Config{
+		LoaderFunc: nil,
+	}
+	if len(defaultConfig) > 0 {
+		config = defaultConfig[0]
+	}
+
+	return &Engine{
 		Config:   config,
-		Registry: map[string]ast.Block{},
+		Registry: map[string]any{},
 	}
 }
 
-func (te *Context) Evaluate(block ast.Block) (string, error) {
+func (te *Engine) ActuallyEvaluateExpression(expr ast.Block) (any, error) {
+	sb := &strings.Builder{}
+	var result any
+
+	for _, node := range expr {
+		switch node := node.(type) {
+		case *ast.ElementNode:
+			switch node.Name {
+			case "if":
+				if len(node.Arguments) != 3 {
+					return nil, fmt.Errorf("if expected 3 args but got %d", len(node.Arguments))
+				}
+
+			default:
+				return nil, fmt.Errorf("unexpected expression %q", node.Name)
+			}
+		case *ast.TextNode:
+			varParts := regexp.MustCompile(`\s+`).Split(node.Text, -1)
+			for _, varPart := range varParts {
+				varName := strings.TrimSpace(varPart)
+				varValue, ok := te.Registry[varName]
+				if !ok {
+					return nil, fmt.Errorf("no variable named %q", varName)
+				}
+
+				switch value := varValue.(type) {
+				case ast.Block:
+					s, err := te.Evaluate(value)
+					if err != nil {
+						return nil, err
+					}
+
+					sb.WriteString(s)
+				default:
+					if _, err := fmt.Fprintf(sb, "%v", value); err != nil {
+						return nil, err
+					}
+				}
+			}
+		}
+	}
+
+	if result == nil {
+		return sb.String(), nil
+	}
+
+	return result, nil
+}
+
+func (te *Engine) EvaluateExpression(expr ast.Block) (string, error) {
+	v, err := te.ActuallyEvaluateExpression(expr)
+	if err != nil {
+		return "", err
+	}
+
+	if s, ok := v.(string); ok {
+		return s, nil
+	}
+
+	return fmt.Sprintf("%v", v), nil
+}
+
+func (te *Engine) Evaluate(block ast.Block) (string, error) {
 	r := &strings.Builder{}
 	var extendsDirective *string = nil
 
@@ -88,10 +158,7 @@ func (te *Context) Evaluate(block ast.Block) (string, error) {
 					return "", fmt.Errorf(`anonymous block expected 1 argument, got %d`, len(n.Arguments))
 				}
 
-				key := n.Arguments[0].TextContent()
-				value := te.Registry[key]
-
-				s, err := te.Evaluate(value)
+				s, err := te.EvaluateExpression(n.Arguments[0])
 				if err != nil {
 					return "", err
 				}
@@ -108,7 +175,7 @@ func (te *Context) Evaluate(block ast.Block) (string, error) {
 	if extendsDirective != nil {
 		value := te.Registry[*extendsDirective]
 
-		s, err := te.Evaluate(value)
+		s, err := te.Evaluate(value.(ast.Block))
 		if err != nil {
 			return "", err
 		}
