@@ -5,7 +5,7 @@ This runtime provides a sub-language to define templates and layouts and combine
 _./example-layouts.tml_
 
 ```html
-#define{ base-layout }{
+#template{ base-layout }{
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -24,13 +24,13 @@ _./example-layouts.tml_
     </html>
 }
 
-#define{ article-layout }{
-    #extends{ base-layout }
-    
-    #define{ title }{ Article - #{ article.title } }
-    #define{ body }{
-        <h1>#{ article.title }</h1>
-        #{ article.body }
+#template{ article-layout }{
+    #extends{ base-layout }{
+        #define{ title }{ Article - #{ article.title } }
+        #define{ body }{
+            <h1>#{ article.title }</h1>
+            #{ article.body }
+        }
     }
 }
 ```
@@ -41,16 +41,16 @@ _./article-1.tml_
 
 ```html
 #import{ ./example-layouts.tml }
-#extends{ base-layout }
-
-#define{ head }{
-    <!-- maybe add KaTeX support just for this page -->
+#extends{ base-layout }{
+    #define{ head }{
+        <!-- maybe add KaTeX support just for this page -->
+    }
+    #define{ article.title }{ Article 1 }
+    #define{ article.body }{
+        <p>Some article</p>
+    }
 }
 
-#define{ article.title }{ Article 1 }
-#define{ article.body }{
-    <p>Some article</p>
-}
 ```
 
 ## Usage
@@ -59,15 +59,27 @@ _./article-1.tml_
 
 ## Documentation
 
-- `#define{ NAME }{ TEMPLATE }` introduces a binding for `NAME` to `TEMPLATE`. Bindings can be used by calling them with `#{ NAME }`.
+- `#template{ NAME }{ TEMPLATE }` defines a new template `NAME` with value `TEMPLATE`. Templates can be expanded using the `#extends{ NAME }{ ... }` directive
 
-- `#{ NAME }` replaces the directive with the evaluated string produced from the binding for `NAME`.
+- `#define{ NAME }{ VALUE }` evaluates ast for `VALUE` when this define gets called and binds it to the variable `NAME`.
 
-- `#extends{ NAME }` works mostly like the previous one but can be used only once during an evaluation and its binding is evaluated at the end and the produced string put at the end.
+- `#{ EXPR }` evaluates the code inside or variable interpolation.
+
+- `#extends{ NAME }{ BLOCK }` evaluates first the given `BLOCK` and then the template bind to `NAME`.
 
 - `#import{ MODULE }` is used to "include" a module using the provider `LoaderFunc`, for example `FileLoader` reads a file and evaluates it in-place in the current context, the produced string is .
 
+### Expressions
 
+- `#char{ CHAR_NAME }`
+
+- `#foreach{ ITEM }{ ITEMS }{ BLOCK }`
+
+- `#intersperse{ ITEMS }{ SEPARATOR }`
+
+- `#if{ CONDITION }{ IF_TRUE }`
+
+- `#if{ CONDITION }{ IF_TRUE }{ IF_FALSE }`
 
 
 

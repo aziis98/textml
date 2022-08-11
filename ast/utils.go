@@ -1,6 +1,6 @@
 package ast
 
-// FirstElement returns the first [*ElementNode] in this block or nil otherwise.
+// FirstElement returns the first [ast.ElementNode] in this block or nil otherwise.
 func (b Block) FirstElement() *ElementNode {
 	for _, n := range b {
 		if elem, ok := n.(*ElementNode); ok {
@@ -10,7 +10,7 @@ func (b Block) FirstElement() *ElementNode {
 	return nil
 }
 
-// TextContent concatenates all [*TextNode] text in this block (for now [*ElementNode]s are skipped)
+// TextContent concatenates all [ast.TextNode] text in this block (for now [ast.ElementNode]s are skipped)
 func (b Block) TextContent() string {
 	s := ""
 	for _, n := range b {

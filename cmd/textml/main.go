@@ -167,7 +167,8 @@ func commandTemplate(inputFile *os.File, outputFile *os.File) {
 		log.Fatal(err)
 	}
 
-	ctx := template.New(&template.Config{
+	ctx := template.New(template.Config{
+		TrimSpaces: false,
 		LoaderFunc: template.FileLoader,
 	})
 

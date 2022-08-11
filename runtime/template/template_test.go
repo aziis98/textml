@@ -20,7 +20,7 @@ func dedent(s string) string {
 func simplify(s string) string {
 	return strings.TrimSpace(
 		regexConsecutiveBlankLines.ReplaceAllString(
-			strings.TrimSpace(s), "\n",
+			dedent(s), "\n",
 		),
 	)
 }
@@ -29,13 +29,13 @@ func removeNewlines(s string) string {
 	return strings.ReplaceAll(strings.TrimSpace(s), "\n", "")
 }
 
-func renderTemplate(e *template.Engine, s string) (string, error) {
+func renderTemplate(e *template.Engine, s string, opts ...template.EngineEvaluateOption) (string, error) {
 	doc, err := textml.ParseDocument(strings.NewReader(dedent(s)))
 	if err != nil {
 		return "", err
 	}
 
-	rendered, err := e.Evaluate(doc)
+	rendered, err := e.Evaluate(doc, opts...)
 	if err != nil {
 		return "", err
 	}
@@ -44,7 +44,9 @@ func renderTemplate(e *template.Engine, s string) (string, error) {
 }
 
 func TestBasicEvaluation(t *testing.T) {
-	a, err := renderTemplate(template.New(), "Lorem ipsum")
+	a, err := renderTemplate(template.New(), `
+		Lorem ipsum
+	`)
 	assert.Nil(t, err)
 	assert.Equal(t, "Lorem ipsum", a)
 }
@@ -70,12 +72,13 @@ func TestLastWins(t *testing.T) {
 
 func TestExtends(t *testing.T) {
 	a, err := renderTemplate(template.New(), `
-		#define{ layout-1 }{
+		#template{ example }{
 			Hello, #{ name }!
 		}
 		
-		#extends{ layout-1 }
-		#define{ name }{ John }
+		#extends{ example }{
+			#define{ name }{ John }
+		}
 	`)
 	assert.Nil(t, err)
 	assert.Equal(t, "Hello, John!", a)
@@ -83,42 +86,91 @@ func TestExtends(t *testing.T) {
 
 func TestNestedExtends(t *testing.T) {
 	a, err := renderTemplate(template.New(), `
-		#define{ base-layout }{
+		#template{ base-layout }{
 			Document(#{ body })
 		}
 
-		#define{ article-layout }{
-			#extends{ base-layout }
-
-			#define{ body }{
-				Article(#{ article.body })
+		#template{ article-layout }{
+			#extends{ base-layout }{
+				#define{ body }{
+					Article(#{ article.body })
+				}
 			}
 		}
 		
-		#extends{ article-layout }
-		#define{ article.body }{ Example }
+		#extends{ article-layout }{
+			#define{ article.body }{ Example }
+		}
 	`)
 	assert.Nil(t, err)
 	assert.Equal(t, "Document(Article(Example))", removeNewlines(a))
 }
 
-func TestExpressionMultipleVariables(t *testing.T) {
+func TestExpressionIf2(t *testing.T) {
 	eng := template.New()
-	eng.Registry["x"] = 123
-	eng.Registry["y"] = 234
+	eng.Variables["c"] = false
+	eng.Variables["x"] = "Nope"
 
-	a, err := renderTemplate(eng, `#{ x y }`)
+	a, err := renderTemplate(eng, `
+		Hidden: #if{ c }{ #{ x } }
+	`)
 	assert.Nil(t, err)
-	assert.Equal(t, "123234", a)
+	assert.Equal(t, "Hidden:", a)
 }
 
-func TestExpressionIfs(t *testing.T) {
+func TestExpressionIf3(t *testing.T) {
 	eng := template.New()
-	eng.Registry["c"] = false
-	eng.Registry["x"] = 123
-	eng.Registry["y"] = 234
+	eng.Variables["c"] = false
+	eng.Variables["x"] = 123
+	eng.Variables["y"] = 234
 
-	a, err := renderTemplate(eng, `#{ #if{ c }{ x }{ y } }`)
+	a, err := renderTemplate(eng, `
+		#if{ c }{ #{ x } }{ #{ y } }
+	`)
 	assert.Nil(t, err)
 	assert.Equal(t, "234", a)
+}
+
+func TestExpressionForEach(t *testing.T) {
+	eng := template.New()
+	eng.Variables["names"] = []string{"Adam", "Billy", "John", "Rose"}
+
+	a, err := renderTemplate(eng, `
+		#foreach{ name }{ names }{
+		Hi, #{ name }! }
+	`)
+	assert.Nil(t, err)
+	assert.Equal(t, simplify(`
+		Hi, Adam!
+		Hi, Billy!
+		Hi, John!
+		Hi, Rose!
+	`), a)
+}
+
+func TestExpressionForEachChar(t *testing.T) {
+	eng := template.New()
+	eng.Variables["names"] = []string{"Adam", "Billy", "John", "Rose"}
+
+	a, err := renderTemplate(eng, `
+		#foreach{ name }{ names }{ Hi, #{ name }!#char{ newline } }
+	`)
+	assert.Nil(t, err)
+	assert.Equal(t, simplify(`
+		Hi, Adam!
+		Hi, Billy!
+		Hi, John!
+		Hi, Rose!
+	`), a)
+}
+
+func TestExpressionIntersperse(t *testing.T) {
+	eng := template.New()
+	eng.Variables["things"] = []string{"aaa", "bbb", "ccc", "ddd"}
+
+	a, err := renderTemplate(eng, `
+		#intersperse{ things }{ ,  }
+	`)
+	assert.Nil(t, err)
+	assert.Equal(t, `aaa, bbb, ccc, ddd`, a)
 }

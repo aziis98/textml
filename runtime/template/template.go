@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"regexp"
+	"reflect"
 	"strings"
 
 	"github.com/aziis98/textml"
@@ -30,16 +30,19 @@ func FileLoader(ctx *Engine, filename string) error {
 }
 
 type Config struct {
+	TrimSpaces bool
 	LoaderFunc func(*Engine, string) error
 }
 
 type Engine struct {
-	Config   Config
-	Registry map[string]any
+	Config    Config
+	Variables map[string]any
+	Templates map[string]ast.Block
 }
 
 func New(defaultConfig ...Config) *Engine {
 	config := Config{
+		TrimSpaces: false,
 		LoaderFunc: nil,
 	}
 	if len(defaultConfig) > 0 {
@@ -47,141 +50,305 @@ func New(defaultConfig ...Config) *Engine {
 	}
 
 	return &Engine{
-		Config:   config,
-		Registry: map[string]any{},
+		Config:    config,
+		Variables: map[string]any{},
+		Templates: map[string]ast.Block{},
 	}
 }
 
-func (te *Engine) ActuallyEvaluateExpression(expr ast.Block) (any, error) {
-	sb := &strings.Builder{}
-	var result any
+// func (e *Engine) evaluateValue(block ast.Block) (any, error) {
+// 	text := block.TextContent()
+// 	trimmed := strings.TrimSpace(text)
 
-	for _, node := range expr {
-		switch node := node.(type) {
-		case *ast.ElementNode:
-			switch node.Name {
-			case "if":
-				if len(node.Arguments) != 3 {
-					return nil, fmt.Errorf("if expected 3 args but got %d", len(node.Arguments))
-				}
+// 	r, _ := utf8.DecodeRuneInString(trimmed)
+// 	if unicode.IsDigit(r) {
+// 		floatValue, err := strconv.ParseFloat(trimmed, 64)
+// 		if err == nil {
+// 			return floatValue, nil
+// 		}
 
-			default:
-				return nil, fmt.Errorf("unexpected expression %q", node.Name)
-			}
-		case *ast.TextNode:
-			varParts := regexp.MustCompile(`\s+`).Split(node.Text, -1)
-			for _, varPart := range varParts {
-				varName := strings.TrimSpace(varPart)
-				varValue, ok := te.Registry[varName]
-				if !ok {
-					return nil, fmt.Errorf("no variable named %q", varName)
-				}
+// 		intValue, err := strconv.ParseInt(trimmed, 10, 64)
+// 		if err == nil {
+// 			return intValue, nil
+// 		}
+// 	}
 
-				switch value := varValue.(type) {
-				case ast.Block:
-					s, err := te.Evaluate(value)
-					if err != nil {
-						return nil, err
-					}
+// 	if trimmed == "true" {
+// 		return true, nil
+// 	}
+// 	if trimmed == "false" {
+// 		return false, nil
+// 	}
 
-					sb.WriteString(s)
-				default:
-					if _, err := fmt.Fprintf(sb, "%v", value); err != nil {
-						return nil, err
-					}
-				}
-			}
+// 	return nil, fmt.Errorf("invalid value %q", trimmed)
+// }
+
+func errInvalidElement(elem *ast.ElementNode) error {
+	return fmt.Errorf("invalid template command %q with %d arguments", elem.Name, len(elem.Arguments))
+}
+
+var commandCharMap = map[string]string{
+	"tab":     "\t",
+	"newline": "\n",
+}
+
+func (e *Engine) evaluateElement(elem *ast.ElementNode) (any, error) {
+	switch elem.Name {
+	case "import":
+		if len(elem.Arguments) != 1 {
+			return nil, errInvalidElement(elem)
 		}
-	}
-
-	if result == nil {
-		return sb.String(), nil
-	}
-
-	return result, nil
-}
-
-func (te *Engine) EvaluateExpression(expr ast.Block) (string, error) {
-	v, err := te.ActuallyEvaluateExpression(expr)
-	if err != nil {
-		return "", err
-	}
-
-	if s, ok := v.(string); ok {
-		return s, nil
-	}
-
-	return fmt.Sprintf("%v", v), nil
-}
-
-func (te *Engine) Evaluate(block ast.Block) (string, error) {
-	r := &strings.Builder{}
-	var extendsDirective *string = nil
-
-	for _, n := range block {
-		switch n := n.(type) {
-		case *ast.ElementNode:
-			switch n.Name {
-
-			case "import":
-				if len(n.Arguments) != 1 {
-					return "", fmt.Errorf(`#import expected 1 argument, got %d`, len(n.Arguments))
-				}
-
-				if te.Config.LoaderFunc == nil {
-					return "", fmt.Errorf(`template engine has no module loader`)
-				}
-
-				moduleName := n.Arguments[0].TextContent()
-
-				if err := te.Config.LoaderFunc(te, moduleName); err != nil {
-					return "", err
-				}
-
-			case "extends":
-				if len(n.Arguments) != 1 {
-					return "", fmt.Errorf(`#import expected 1 argument, got %d`, len(n.Arguments))
-				}
-
-				extendsDirective = new(string)
-				*extendsDirective = n.Arguments[0].TextContent()
-			case "define":
-				if len(n.Arguments) != 2 {
-					return "", fmt.Errorf(`#define expected 2 arguments, got %d`, len(n.Arguments))
-				}
-
-				key := n.Arguments[0].TextContent()
-				te.Registry[key] = n.Arguments[1]
-
-			case "":
-				if len(n.Arguments) != 1 {
-					return "", fmt.Errorf(`anonymous block expected 1 argument, got %d`, len(n.Arguments))
-				}
-
-				s, err := te.EvaluateExpression(n.Arguments[0])
-				if err != nil {
-					return "", err
-				}
-
-				r.WriteString(s)
-			default:
-				return "", fmt.Errorf(`unexpected element "#%s"`, n.Name)
-			}
-		case *ast.TextNode:
-			r.WriteString(n.Text)
+		if e.Config.LoaderFunc == nil {
+			return "", fmt.Errorf(`template engine has no module loader`)
 		}
-	}
-
-	if extendsDirective != nil {
-		value := te.Registry[*extendsDirective]
-
-		s, err := te.Evaluate(value.(ast.Block))
-		if err != nil {
+		moduleName := elem.Arguments[0].TextContent()
+		if err := e.Config.LoaderFunc(e, moduleName); err != nil {
 			return "", err
 		}
 
-		r.WriteString(s)
+		return nil, nil
+
+	case "template":
+		if len(elem.Arguments) != 2 {
+			return "", errInvalidElement(elem)
+		}
+		tmplName := elem.Arguments[0].TextContent()
+		e.Templates[tmplName] = elem.Arguments[1]
+
+		return nil, nil
+
+	case "define":
+		if len(elem.Arguments) != 2 {
+			return "", errInvalidElement(elem)
+		}
+		varName := elem.Arguments[0].TextContent()
+
+		varValue, err := e.evaluateBlock(elem.Arguments[1])
+		if err != nil {
+			return nil, err
+		}
+
+		e.Variables[varName] = varValue
+
+		return nil, nil
+
+	case "extends":
+		if len(elem.Arguments) != 2 {
+			return "", fmt.Errorf(`#define expected 2 arguments, got %d`, len(elem.Arguments))
+		}
+
+		key := elem.Arguments[0].TextContent()
+		extendingTemplate, ok := e.Templates[key]
+		if !ok {
+			return nil, fmt.Errorf("no binding for %q", key)
+		}
+
+		_, err := e.evaluateBlock(elem.Arguments[1])
+		if err != nil {
+			return nil, err
+		}
+
+		result, err := e.evaluateBlock(extendingTemplate)
+		if err != nil {
+			return nil, err
+		}
+
+		return result, nil
+
+	case "if":
+		if len(elem.Arguments) < 2 && len(elem.Arguments) > 3 {
+			return nil, errInvalidElement(elem)
+		}
+
+		cond := elem.Arguments[0]
+		ifTrue := elem.Arguments[1]
+
+		condValue, err := e.evaluateBlock(cond)
+		if err != nil {
+			return nil, err
+		}
+
+		if c, ok := condValue.(bool); ok && c {
+			return e.evaluateBlock(ifTrue)
+		} else if len(elem.Arguments) == 3 {
+			return e.evaluateBlock(elem.Arguments[2])
+		} else {
+			return nil, nil
+		}
+
+	case "foreach":
+		if len(elem.Arguments) != 3 {
+			return nil, errInvalidElement(elem)
+		}
+
+		loopVarName := strings.TrimSpace(elem.Arguments[0].TextContent())
+		itemsVarName := strings.TrimSpace(elem.Arguments[1].TextContent())
+
+		itemsValue, ok := e.Variables[itemsVarName]
+		if !ok {
+			return nil, fmt.Errorf("no binding for %q", itemsVarName)
+		}
+
+		if reflect.TypeOf(itemsValue).Kind() != reflect.Slice {
+			return nil, fmt.Errorf("the type %T given to #foreach cannot be iterated", itemsValue)
+		}
+
+		sb := &strings.Builder{}
+
+		s := reflect.ValueOf(itemsValue)
+		for i := 0; i < s.Len(); i++ {
+			itemValue := s.Index(i).Interface()
+			e.Variables[loopVarName] = itemValue
+
+			result, err := e.evaluateBlock(elem.Arguments[2])
+			if err != nil {
+				return nil, err
+			}
+
+			fmt.Fprintf(sb, "%v", result)
+		}
+
+		return sb.String(), nil
+
+	case "intersperse":
+		if len(elem.Arguments) != 2 {
+			return nil, errInvalidElement(elem)
+		}
+
+		itemsVarName := strings.TrimSpace(elem.Arguments[0].TextContent())
+		intersperseStr := elem.Arguments[1].TextContent()
+
+		itemsValue, ok := e.Variables[itemsVarName]
+		if !ok {
+			return nil, fmt.Errorf("no binding for %q", itemsVarName)
+		}
+
+		if reflect.TypeOf(itemsValue).Kind() != reflect.Slice {
+			return nil, fmt.Errorf("the type %T given to #foreach cannot be iterated", itemsValue)
+		}
+
+		sb := &strings.Builder{}
+
+		s := reflect.ValueOf(itemsValue)
+		for i := 0; i < s.Len(); i++ {
+			if i != 0 {
+				sb.WriteString(intersperseStr)
+			}
+
+			itemValue := s.Index(i).Interface()
+			fmt.Fprintf(sb, "%v", itemValue)
+		}
+
+		return sb.String(), nil
+
+	case "char":
+		if len(elem.Arguments) != 1 {
+			return nil, errInvalidElement(elem)
+		}
+
+		charName := elem.Arguments[0].TextContent()
+		str, ok := commandCharMap[charName]
+		if !ok {
+			return nil, fmt.Errorf("invalid char %q", charName)
+		}
+
+		return str, nil
+
+	case "":
+		if len(elem.Arguments) != 1 {
+			return nil, errInvalidElement(elem)
+		}
+
+		varName := strings.TrimSpace(elem.Arguments[0].TextContent())
+		variableValue, ok := e.Variables[varName]
+		if !ok {
+			return nil, fmt.Errorf("no variable %q", varName)
+		}
+
+		return variableValue, nil
+
+	default:
+		return nil, fmt.Errorf("invalid template command %q", elem.Name)
+	}
+}
+
+func (e *Engine) evaluateBlock(block ast.Block) (any, error) {
+	sb := &strings.Builder{}
+	var resultValue any = nil
+
+	elemNodeCount := 0
+	nonBlankTextNodeCount := 0
+
+	for _, node := range block {
+		switch node := node.(type) {
+		case *ast.ElementNode:
+			elemNodeCount++
+
+			result, err := e.evaluateElement(node)
+			if err != nil {
+				return nil, err
+			}
+
+			resultValue = result
+
+			if result != nil {
+				fmt.Fprintf(sb, "%v", result)
+			}
+		case *ast.TextNode:
+			if len(strings.TrimSpace(node.Text)) > 0 {
+				nonBlankTextNodeCount++
+			}
+
+			text := node.Text
+			if e.Config.TrimSpaces {
+				text = strings.Trim(text, " ")
+			}
+
+			fmt.Fprintf(sb, "%s", text)
+		}
 	}
 
-	return r.String(), nil
+	if elemNodeCount == 1 && nonBlankTextNodeCount == 0 {
+		return resultValue, nil
+	}
+
+	return sb.String(), nil
+}
+
+type EngineEvaluateOption func(e *Engine)
+
+func WithTemplate(name string, tmpl ast.Block) EngineEvaluateOption {
+	return func(e *Engine) {
+		e.Templates[name] = tmpl
+	}
+}
+
+func WithVariable(key string, value any) EngineEvaluateOption {
+	return func(e *Engine) {
+		e.Variables[key] = value
+	}
+}
+
+func WithContext(vars map[string]any) EngineEvaluateOption {
+	return func(e *Engine) {
+		for k, v := range vars {
+			e.Variables[k] = v
+		}
+	}
+}
+
+func (e *Engine) Evaluate(block ast.Block, options ...EngineEvaluateOption) (string, error) {
+	for _, opt := range options {
+		opt(e)
+	}
+
+	result, err := e.evaluateBlock(block)
+	if err != nil {
+		return "", err
+	}
+	if result == nil {
+		return "", nil
+	}
+
+	return fmt.Sprintf("%v", result), nil
 }
