@@ -59,29 +59,45 @@ _./article-1.tml_
 
 ## Reference
 
-- `#template{ NAME }{ TEMPLATE }` defines a new template `NAME` with value `TEMPLATE`. Templates can be expanded using the `#extends{ NAME }{ ... }` directive
+-   `#template{ NAME }{ TEMPLATE }`
+    defines a new template `NAME` with value `TEMPLATE`. Templates can be expanded using the `#extends{ NAME }{ ... }` directive.
 
-- `#define{ NAME }{ VALUE }` evaluates ast for `VALUE` when this define gets called and binds it to the variable `NAME`.
+-   `#define{ NAME }{ VALUE }`
+    evaluates ast for `VALUE` when this define gets called and binds it to the variable `NAME`.
 
-- `#{ EXPR }` evaluates the code inside or variable interpolation.
+-   `#{ EXPR }`
+    evaluates the code inside or variable interpolation.
 
-- `#extends{ NAME }{ BLOCK }` evaluates first the given `BLOCK` and then the template bind to `NAME`.
+-   `#extends{ NAME }{ BLOCK }`
+    evaluates first the given `BLOCK` and then the template bind to `NAME`.
 
-- `#import{ MODULE }` is used to "include" a module using the provider `LoaderFunc`, for example `FileLoader` reads a file and evaluates it in-place in the current context, the produced string is .
+-   `#import{ MODULE }`
+    is used to include a "module" using the given `LoaderFunc`, for example the default `FileLoader` reads a file and evaluates it in-place in the current engine context.
 
 ### Expressions
 
-- `#char{ CHAR_NAME }`
+-   `#char{ CHAR_NAME }` 
+    is a directive for printing some special characters like `space`, `newline` or `tab`.
 
-- `#foreach{ ITEM }{ ITEMS }{ BLOCK }`
+-   `#inline{ ... }`
+    recursively removes "newlines" (things matching `[ ]*\n\s*`) from all text nodes inside this inline block, mostly used for blocks that require more control on the generation of whitespace while keeping the code readable (works nice with the `#char` directive).
 
-- `#intersperse{ ITEMS }{ SEPARATOR }`
+-   `#foreach{ ITEM }{ ITEMS }{ BLOCK }`
+    takes a variable name `ITEM`, a list `ITEMS`. For each item in the given list this will set the `ITEM` variable to the current item and then evaluate `BLOCK`.
 
-- `#if{ CONDITION }{ IF_TRUE }`
+-   `#intersperse{ ITEMS }{ SEPARATOR }`
+    takes a list and intersperses that list with the string given by `SEPARATOR`, useful for printing list inline.
 
-- `#if{ CONDITION }{ IF_TRUE }{ IF_FALSE }`
+-   `#if{ CONDITION }{ IF_TRUE }`
+    evaluates the chosen branch based on the value of `CONDITION`.
 
+-   `#if{ CONDITION }{ IF_TRUE }{ IF_FALSE }`
+    evaluates the chosen branch based on the value of `CONDITION`.
 
+-   `#unless{ CONDITION }{ UNLESS_FALSE }`
+    evaluates the chosen branch based on the value of `CONDITION`.
 
+-   `#unless{ CONDITION }{ UNLESS_FALSE }{ UNLESS_TRUE }`
+    evaluates the chosen branch based on the value of `CONDITION`.
 
 
