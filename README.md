@@ -9,7 +9,7 @@ A textml document is composed of various _blocks_ that can also be nested. A **b
 This language provides just the syntax and a part from that it can be used to describe various things, for example a markdown-like document can be described as follows
 
 <p align="center">
-<img src="docs/syntax-highlighting-document.png" width="600" alt="example syntax highlighting of a textml document">   
+<img src="docs/syntax-highlighting-document.png" width="600" alt="example syntax highlighting of a textml document"> <br>
 <i><a href="examples/document.tml">Example document from <code>examples/document.tml</code></a></i>
 </p>
 
