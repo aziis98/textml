@@ -6,41 +6,7 @@ My personal textual markup language. Mostly a more structured alternative to Mar
 
 A **document** is composed of various _blocks_ that can also be nested. A **block** can be a of _text node_ or an _element node_. For example a document can be described as follows
 
-```
-#document {
-    #title { This is a short title }
-
-    This is a paragraph with some text and #bold{ bold } and
-    #italic{ italic } formatting.
-
-    Elements can also have multiple argument as #link{this link
-    to wikipedia}{https://en.wikipedia.org/}
-
-    #subtitle { Another section }
-
-    Code blocks can be easily nested and annotated, for example
-
-    #code {{
-        #format {{ textml }}
-
-        #document {
-            #title { Example }
-
-            With #underline{some text}
-        }
-    }}
-
-    As long as braces are balanced any meta-depth can be reached.
-
-    #code {{{
-        #code {{
-            #code {
-                let x = 1;
-            }
-        }}
-    }}}
-}
-```
+<img src="docs/syntax-highlighting-document.png" alt="example syntax highlighting of a textml document">
 
 ## Usage
 
