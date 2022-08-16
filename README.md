@@ -6,7 +6,9 @@ My personal textual markup language. Mostly a more structured alternative to Mar
 
 A **document** is composed of various _blocks_ that can also be nested. A **block** can be a of _text node_ or an _element node_. For example a document can be described as follows
 
-<img src="docs/syntax-highlighting-document.png" alt="example syntax highlighting of a textml document">
+<p align="center">
+<img src="docs/syntax-highlighting-document.png" width="600" alt="example syntax highlighting of a textml document">
+</p>
 
 ## Usage
 
