@@ -4,9 +4,13 @@ My personal textual markup language. Mostly a more structured alternative to Mar
 
 ## Introduction
 
-A **document** is composed of various _blocks_ that can also be nested. A **block** can be a of _text node_ or an _element node_. For example a document can be described as follows
+A textml document is composed of various _blocks_ that can also be nested. A **block** can be a _text node_ or an _element node_. 
 
-<img src="docs/syntax-highlighting-document.png" alt="example syntax highlighting of a textml document">
+This language provides just the syntax and a part from that it can be used to describe various things, for example a markdown-like document can be described as follows
+
+<p align="center">
+<img src="docs/syntax-highlighting-document.png" width="600" alt="example syntax highlighting of a textml document">
+</p>
 
 ## Usage
 
